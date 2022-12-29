@@ -5,6 +5,56 @@
     "description": "Preprocessing steps to extract the data for PCAProfiler",
     "type": "object",
     "definitions": {
+        "reference_creation_options": {
+            "title": "Reference creation options",
+            "type": "object",
+            "description": "Additional arguments for the creation of the reference",
+            "default": "",
+            "properties": {
+                "mapability": {
+                    "type": "string"
+                },
+                "mapability_len": {
+                    "type": "string"
+                },
+                "extraref": {
+                    "type": "string"
+                },
+                "blacklist": {
+                    "type": "string"
+                },
+                "roi": {
+                    "type": "string"
+                }
+            }
+        },
+        "alignment_options": {
+            "title": "Alignment options",
+            "type": "object",
+            "description": "STAR alignment options",
+            "default": "",
+            "properties": {
+                "save_reference": {
+                    "type": "boolean",
+                    "description": "Save the reference generated with STAR and the other tools"
+                },
+                "fasta": {
+                    "type": "string",
+                    "description": "Reference genome from GENCODE in fasta format"
+                },
+                "gtf": {
+                    "type": "string",
+                    "description": "GTF of the reference annotation in GENCODE format"
+                },
+                "star_index": {
+                    "type": "string",
+                    "description": "Location of the star index"
+                },
+                "irfinder_ref": {
+                    "type": "string"
+                }
+            }
+        },
         "input_output_options": {
             "title": "Input/output options",
             "type": "object",
@@ -44,13 +94,6 @@
                     "fa_icon": "fas fa-file-signature"
                 }
             }
-        },
-        "reference_genome_options": {
-            "title": "Reference genome options",
-            "type": "object",
-            "fa_icon": "fas fa-dna",
-            "description": "Reference genome related files and options required for the workflow.",
-            "properties": {}
         },
         "institutional_config_options": {
             "title": "Institutional config options",
@@ -254,10 +297,13 @@
     },
     "allOf": [
         {
-            "$ref": "#/definitions/input_output_options"
+            "$ref": "#/definitions/reference_creation_options"
         },
         {
-            "$ref": "#/definitions/reference_genome_options"
+            "$ref": "#/definitions/alignment_options"
+        },
+        {
+            "$ref": "#/definitions/input_output_options"
         },
         {
             "$ref": "#/definitions/institutional_config_options"
