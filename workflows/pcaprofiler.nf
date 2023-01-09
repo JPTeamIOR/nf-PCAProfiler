@@ -56,7 +56,13 @@ include { CUSTOM_DUMPSOFTWAREVERSIONS } from '../modules/nf-core/custom/dumpsoft
 include { TRIMGALORE } from '../modules/nf-core/trimgalore/main'
 include { STAR_ALIGN } from '../modules/nf-core/star/align/main'
 include { SALMON_QUANT } from '../modules/nf-core/salmon/quant/main'
+include { SORTMERNA       } from '../modules/nf-core/sortmerna/main'
+
 include { IRFINDER_PROCESS_BAM } from '../modules/local/irfinder/process_bam'
+include { IMOKA_EXTRACT_KMERS } from '../modules/local/imoka/extract_kmers'
+include { DECONTAMINER } from '../modules/local/decontaminer/main'
+include { WHIPPET_PROCESS_FASTQ } from '../modules/local/whippet/process_fastq/main.nf'
+
 
 /*
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -75,6 +81,11 @@ workflow PCAPROFILER {
     //
     PREPARE_GENOME()
     ch_versions = ch_versions.mix(PREPARE_GENOME.out.versions)
+
+    // Check rRNA databases for sortmerna
+
+    ch_ribo_db = file(params.ribo_database_manifest, checkIfExists: true)
+    if (ch_ribo_db.isEmpty()) { exit 1, "File provided with --ribo_database_manifest is empty: ${ch_ribo_db.getName() }!" }
 
     //
     // SUBWORKFLOW: Read in samplesheet, validate and stage input files
@@ -95,13 +106,40 @@ workflow PCAPROFILER {
     //
     // MODULE: Run Trimgalore
     //
-    TRIMGALORE(INPUT_CHECK.out.reads).reads.set { trim_reads }
+    ch_filtered_reads = TRIMGALORE(INPUT_CHECK.out.reads).reads
+
+    //
+    // MODULE: Remove ribosomal RNA reads
+    //
+
+    ch_sortmerna_fastas = Channel.from(ch_ribo_db.readLines()).map { row -> file(row, checkIfExists: true) }.collect()
+    SORTMERNA(
+            ch_filtered_reads,
+            ch_sortmerna_fastas
+        )
+        .reads
+        .set { ch_filtered_reads }
+
+    ch_versions = ch_versions.mix(SORTMERNA.out.versions.first())
+
+    //
+    // MODULE : iMOKA extract k-mers
+    //
+    IMOKA_EXTRACT_KMERS(ch_filtered_reads, params.k_len)
+    ch_versions   = ch_versions.mix(IMOKA_EXTRACT_KMERS.out.versions.first())
+
+    //
+    // MODULE : Whippet quant
+    //
+
+    WHIPPET_PROCESS_FASTQ(ch_filtered_reads, PREPARE_GENOME.out.whippet_index)
+    ch_versions   = ch_versions.mix(WHIPPET_PROCESS_FASTQ.out.versions.first())
 
     //
     // MODULE: STAR alignment
     //
 
-    STAR_ALIGN(trim_reads,
+    STAR_ALIGN(ch_filtered_reads,
         PREPARE_GENOME.out.star_index,
         PREPARE_GENOME.out.gtf,
         true,
@@ -116,6 +154,15 @@ workflow PCAPROFILER {
     ch_fastq          = STAR_ALIGN.out.fastq
     ch_tab            = STAR_ALIGN.out.tab
     ch_versions       = ch_versions.mix(STAR_ALIGN.out.versions.first())
+
+    ///
+    /// MODULE: Decontaminer
+    ///
+    ch_human_ribo_db = params.human_ribo  ? file(params.human_ribo, checkIfExists: true) : file('NO_RIBO')
+    ch_bacterial_db = params.bacterial_db ?  file(params.bacterial_db, checkIfExists: true) : file('NO_BACTERIAL')
+    ch_fungi_db = params.fungi_db ? file(params.fungi_db, checkIfExists: true) : file('NO_FUNGI')
+    ch_virus_db =  params.virus_db ? file(params.virus_db, checkIfExists: true) : file('NO_VIRUS')
+    DECONTAMINER(ch_fastq, ch_human_ribo_db, ch_bacterial_db, ch_fungi_db, ch_virus_db, false)
 
     ///
     /// MODULE: Quantify using Salmon
@@ -137,8 +184,6 @@ workflow PCAPROFILER {
 
     IRFINDER_PROCESS_BAM(ch_orig_bam, PREPARE_GENOME.out.irfinder_ref)
 
-
-
     CUSTOM_DUMPSOFTWAREVERSIONS(
         ch_versions.unique { it.text }.collectFile(name: 'collated_versions.yml')
     )
@@ -152,12 +197,14 @@ workflow PCAPROFILER {
     methods_description    = WorkflowPcaprofiler.methodsDescriptionText(workflow, ch_multiqc_custom_methods_description)
     ch_methods_description = Channel.value(methods_description)
 
-
     ch_multiqc_files = ch_multiqc_files.mix(ch_workflow_summary.collectFile(name: 'workflow_summary_mqc.yaml'))
     ch_multiqc_files = ch_multiqc_files.mix(ch_methods_description.collectFile(name: 'methods_description_mqc.yaml'))
     ch_multiqc_files = ch_multiqc_files.mix(CUSTOM_DUMPSOFTWAREVERSIONS.out.mqc_yml.collect())
     ch_multiqc_files = ch_multiqc_files.mix(FASTQC.out.zip.collect { it[1] }.ifEmpty([]))
     ch_multiqc_files = ch_multiqc_files.mix(TRIMGALORE.out.zip.collect { it[1] }.ifEmpty([]))
+    ch_multiqc_files = ch_multiqc_files.mix(SORTMERNA.out.log.collect { it[1] }.ifEmpty([]))
+    ch_multiqc_files = ch_multiqc_files.mix(STAR_ALIGN.out.log_final.collect { it[1] }.ifEmpty([]))
+    ch_multiqc_files = ch_multiqc_files.mix(SALMON_QUANT.out.results.collect { it[1] }.ifEmpty([]))
 
     MULTIQC(
         ch_multiqc_files.collect(),

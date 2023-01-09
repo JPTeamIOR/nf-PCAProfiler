@@ -1,0 +1,29 @@
+nextflow_process {
+
+    name "Test Process WHIPPET_PROCESS_FASTQ"
+    script "modules/local/whippet/process_fastq/main.nf"
+    process "WHIPPET_PROCESS_FASTQ"
+
+    test("Should run without failures") {
+
+        when {
+            params {
+                outdir = "tests/results"
+            }
+            process {
+                """
+                input[0] =  [ [single_end : false, id : 'test'] , [
+                    file("./test_data/fastq/SRR14189737_1.fastq.gz") ,
+                    file("./test_data/fastq/SRR14189737_2.fastq.gz")  ]]
+                input[1] = file("tests/results/whippet/whippet_index.jls")
+                """
+            }
+        }
+
+        then {
+            assert process.success
+        }
+
+    }
+
+}

@@ -1,0 +1,33 @@
+nextflow_process {
+
+    name "Test Process DECONTAMINER"
+    script "modules/local/decontaminer/main.nf"
+    process "DECONTAMINER"
+
+    test("Should run without failures") {
+
+        when {
+            params {
+                outdir = "tests/results"
+            }
+            process {
+                """
+                input[0] = [ [single_end : false, id : 'test'] , [
+                    file("test_data/decontaminer/fastq/SRR14189737.unmapped_1.fastq.gz"),
+                    file("test_data/decontaminer/fastq/SRR14189737.unmapped_2.fastq.gz")]]
+                input[1] = file("NO_RIBO")
+                input[2] = file("test_data/decontaminer/DBs/BACTERIA")
+                input[3] = file("test_data/decontaminer/DBs/FUNGI")
+                input[4] = file("test_data/decontaminer/DBs/VIRUSES")
+                input[5] = false
+                """
+            }
+        }
+
+        then {
+            assert process.success
+        }
+
+    }
+
+}

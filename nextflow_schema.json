@@ -12,19 +12,65 @@
             "default": "",
             "properties": {
                 "mapability": {
-                    "type": "string"
+                    "type": "string",
+                    "description": "IRFinder mapability file"
                 },
                 "mapability_len": {
-                    "type": "string"
+                    "type": "integer",
+                    "description": "IRFinder mapability length ( considered when the mapability file is not defined )",
+                    "default": 75
                 },
                 "extraref": {
-                    "type": "string"
+                    "type": "string",
+                    "description": "IRFinder extraref"
                 },
                 "blacklist": {
-                    "type": "string"
+                    "type": "string",
+                    "description": "IRFinder blacklist"
                 },
                 "roi": {
-                    "type": "string"
+                    "type": "string",
+                    "description": "IRFinder region of interest"
+                },
+                "ribo_database_manifest": {
+                    "type": "string",
+                    "default": "${projectDir}/assets/rrna-db-defaults.txt",
+                    "description": "SortMeRNA database manifest"
+                },
+                "human_ribo": {
+                    "type": "string",
+                    "default": "None",
+                    "description": "Decontaminer human ribosomes DB"
+                },
+                "bacterial_db": {
+                    "type": "string",
+                    "default": "None",
+                    "description": "Decontaminer bacterial DB"
+                },
+                "fungi_db": {
+                    "type": "string",
+                    "default": "None",
+                    "description": "Decontaminer fungi DB"
+                },
+                "virus_db": {
+                    "type": "string",
+                    "default": "None",
+                    "description": "Decontaminer virus DB"
+                },
+                "k_len": {
+                    "type": "integer",
+                    "default": 31,
+                    "description": "iMOKA k-mer size"
+                },
+                "whippet_tsl": {
+                    "type": "integer",
+                    "default": 1,
+                    "description": "Whippet Transcript support level filter"
+                },
+                "whippet_ref": {
+                    "type": "string",
+                    "default": "None",
+                    "description": "Whippet index"
                 }
             }
         },
