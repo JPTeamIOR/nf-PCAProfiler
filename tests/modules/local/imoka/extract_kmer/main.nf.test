@@ -1,0 +1,29 @@
+nextflow_process {
+
+    name "Test Process IMOKA_EXTRACT_KMERS"
+    script "modules/local/imoka/extract_kmers/main.nf"
+    process "IMOKA_EXTRACT_KMERS"
+
+    test("Should run without failures") {
+
+        when {
+            params {
+                outdir = "tests/results"
+            }
+            process {
+                """
+                input[0] =  [ [single_end : false, id : 'IDtest'] , [
+                    file("./test_data/fastq/SRR14189737_1.fastq.gz") ,
+                    file("./test_data/fastq/SRR14189737_2.fastq.gz")  ]]
+                input[1] = 31
+                """
+            }
+        }
+
+        then {
+            assert process.success
+        }
+
+    }
+
+}

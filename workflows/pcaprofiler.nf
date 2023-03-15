@@ -10,8 +10,12 @@ def summary_params = NfcoreSchema.paramsSummaryMap(workflow, params)
 WorkflowPcaprofiler.initialise(params, log)
 
 // Check input path parameters to see if they exist
-def checkPathParamList = [ params.input, params.multiqc_config, params.fasta ]
+def checkPathParamList = [ params.input, params.multiqc_config, params.ref_dir ]
 for (param in checkPathParamList) { if (param) { file(param, checkIfExists: true) } }
+
+if (params.conatminant_method ==~ /all|kraken2|decontaminer/) {
+    error 'Contaminant method must be one of all, kraken2, decontaminer'
+}
 
 // Check mandatory parameters
 if (params.input) { ch_input = file(params.input) } else { exit 1, 'Input samplesheet not specified!' }
@@ -39,7 +43,7 @@ ch_multiqc_custom_methods_description = params.multiqc_methods_description ? fil
 // SUBWORKFLOW: Consisting of a mix of local and nf-core/modules
 //
 include { INPUT_CHECK } from '../subworkflows/local/input_check'
-include { PREPARE_GENOME } from '../subworkflows/local/prepare_genome'
+include { CHECK_REFERENCE } from '../subworkflows/local/check_reference'
 
 /*
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -57,12 +61,18 @@ include { TRIMGALORE } from '../modules/nf-core/trimgalore/main'
 include { STAR_ALIGN } from '../modules/nf-core/star/align/main'
 include { SALMON_QUANT } from '../modules/nf-core/salmon/quant/main'
 include { SORTMERNA       } from '../modules/nf-core/sortmerna/main'
+include { KRAKEN2_KRAKEN2 } from '../modules/nf-core/kraken2/kraken2/main'
+include { BRACKEN_BRACKEN } from '../modules/nf-core/bracken/bracken/main'
 
 include { IRFINDER_PROCESS_BAM } from '../modules/local/irfinder/process_bam'
 include { IMOKA_EXTRACT_KMERS } from '../modules/local/imoka/extract_kmers'
 include { DECONTAMINER } from '../modules/local/decontaminer/main'
 include { WHIPPET_PROCESS_FASTQ } from '../modules/local/whippet/process_fastq/main.nf'
+include { STARFUSION_PROCESS } from '../modules/local/star-fusion/main.nf'
+include { CTAT_MUTATION_PROCESS_BAM } from '../modules/local/ctat-mutation/main.nf'
 
+include { SAMTOOLS_INDEX } from '../modules/nf-core/samtools/index/main'
+include { SAMTOOLS_SORT } from '../modules/nf-core/samtools/sort/main'
 
 /*
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -79,13 +89,17 @@ workflow PCAPROFILER {
     //
     // SUBWORKFLOW: prepare genome
     //
-    PREPARE_GENOME()
-    ch_versions = ch_versions.mix(PREPARE_GENOME.out.versions)
-
-    // Check rRNA databases for sortmerna
-
-    ch_ribo_db = file(params.ribo_database_manifest, checkIfExists: true)
-    if (ch_ribo_db.isEmpty()) { exit 1, "File provided with --ribo_database_manifest is empty: ${ch_ribo_db.getName() }!" }
+    CHECK_REFERENCE(params.ref_dir)
+    ch_versions = ch_versions.mix(CHECK_REFERENCE.out.versions)
+    ch_sortmerna_fastas = CHECK_REFERENCE.out.sortmerna_fastas
+    ch_whippet_index = CHECK_REFERENCE.out.whippet_index
+    ch_star_index = CHECK_REFERENCE.out.star_index
+    ch_gtf = CHECK_REFERENCE.out.gtf
+    ch_decontaminer_ref = CHECK_REFERENCE.out.decontaminer
+    ch_ctat_ref = CHECK_REFERENCE.out.ctat
+    ch_transcript_fasta = CHECK_REFERENCE.out.transcript_fasta
+    ch_irfinder_ref = CHECK_REFERENCE.out.irfinder_ref
+    ch_kraken2_ref = CHECK_REFERENCE.out.kraken2
 
     //
     // SUBWORKFLOW: Read in samplesheet, validate and stage input files
@@ -112,7 +126,6 @@ workflow PCAPROFILER {
     // MODULE: Remove ribosomal RNA reads
     //
 
-    ch_sortmerna_fastas = Channel.from(ch_ribo_db.readLines()).map { row -> file(row, checkIfExists: true) }.collect()
     SORTMERNA(
             ch_filtered_reads,
             ch_sortmerna_fastas
@@ -125,14 +138,16 @@ workflow PCAPROFILER {
     //
     // MODULE : iMOKA extract k-mers
     //
-    IMOKA_EXTRACT_KMERS(ch_filtered_reads, params.k_len)
-    ch_versions   = ch_versions.mix(IMOKA_EXTRACT_KMERS.out.versions.first())
+    if (params.extract_kmers) {
+        IMOKA_EXTRACT_KMERS(ch_filtered_reads, params.k_len)
+        ch_versions   = ch_versions.mix(IMOKA_EXTRACT_KMERS.out.versions.first())
+    }
 
     //
     // MODULE : Whippet quant
     //
 
-    WHIPPET_PROCESS_FASTQ(ch_filtered_reads, PREPARE_GENOME.out.whippet_index)
+    WHIPPET_PROCESS_FASTQ(ch_filtered_reads, ch_whippet_index)
     ch_versions   = ch_versions.mix(WHIPPET_PROCESS_FASTQ.out.versions.first())
 
     //
@@ -140,29 +155,46 @@ workflow PCAPROFILER {
     //
 
     STAR_ALIGN(ch_filtered_reads,
-        PREPARE_GENOME.out.star_index,
-        PREPARE_GENOME.out.gtf,
+        ch_star_index,
+        ch_gtf,
         true,
         '',
         '')
     ch_orig_bam       = STAR_ALIGN.out.bam
-    ch_log_final      = STAR_ALIGN.out.log_final
-    ch_log_out        = STAR_ALIGN.out.log_out
-    ch_log_progress   = STAR_ALIGN.out.log_progress
-    ch_bam_sorted     = STAR_ALIGN.out.bam_sorted
     ch_bam_transcript = STAR_ALIGN.out.bam_transcript
-    ch_fastq          = STAR_ALIGN.out.fastq
-    ch_tab            = STAR_ALIGN.out.tab
+    ch_unmapped_fastq = STAR_ALIGN.out.fastq
+    ch_junction       = STAR_ALIGN.out.junction
+
     ch_versions       = ch_versions.mix(STAR_ALIGN.out.versions.first())
 
     ///
     /// MODULE: Decontaminer
     ///
-    ch_human_ribo_db = params.human_ribo  ? file(params.human_ribo, checkIfExists: true) : file('NO_RIBO')
-    ch_bacterial_db = params.bacterial_db ?  file(params.bacterial_db, checkIfExists: true) : file('NO_BACTERIAL')
-    ch_fungi_db = params.fungi_db ? file(params.fungi_db, checkIfExists: true) : file('NO_FUNGI')
-    ch_virus_db =  params.virus_db ? file(params.virus_db, checkIfExists: true) : file('NO_VIRUS')
-    DECONTAMINER(ch_fastq, ch_human_ribo_db, ch_bacterial_db, ch_fungi_db, ch_virus_db, false)
+    if (params.conatminant_method == 'all' || params.conatminant_method == 'decontaminer') {
+        ch_human_ribo_db = file("${ch_decontaminer_ref}/HUMAN_RNA").exists  ? file("${ch_decontaminer_ref}/HUMAN_RNA") : file('NO_RIBO')
+        ch_bacterial_db = file("${ch_decontaminer_ref}/HUMAN_RNA").exists  ? file("${ch_decontaminer_ref}/BACTERIA") : file('NO_BACTERIAL')
+        ch_fungi_db = file("${ch_decontaminer_ref}/HUMAN_RNA").exists  ? file("${ch_decontaminer_ref}/FUNGI") : file('NO_FUNGI')
+        ch_virus_db =  file("${ch_decontaminer_ref}/HUMAN_RNA").exists  ? file("${ch_decontaminer_ref}/VIRUSES") : file('NO_VIRUS')
+        DECONTAMINER(ch_unmapped_fastq, ch_human_ribo_db, ch_bacterial_db, ch_fungi_db, ch_virus_db, false)
+        ch_versions = ch_versions.mix(DECONTAMINER.out.versions)
+    }
+
+    if (params.conatminant_method == 'all' || params.conatminant_method == 'kraken2') {
+        KRAKEN2_KRAKEN2(ch_unmapped_fastq, ch_kraken2_ref, false, false)
+        BRACKEN_BRACKEN(KRAKEN2_KRAKEN2.out.report, ch_kraken2_ref)
+        ch_versions = ch_versions.mix(BRACKEN_BRACKEN.out.versions.first())
+        ch_versions = ch_versions.mix(KRAKEN2_KRAKEN2.out.versions.first())
+    }
+
+    ///
+    /// MODULE: STAR-Fusion
+    ///
+
+    STARFUSION_PROCESS(
+        ch_junction,
+        ch_ctat_ref
+    )
+    ch_version = ch_version.mix(STARFUSION_PROCESS.out.versions)
 
     ///
     /// MODULE: Quantify using Salmon
@@ -171,8 +203,8 @@ workflow PCAPROFILER {
     SALMON_QUANT(
         ch_bam_transcript,
         ch_dummy_file,
-        PREPARE_GENOME.out.gtf,
-        PREPARE_GENOME.out.transcript_fasta,
+        ch_gtf,
+        ch_transcript_fasta,
         true,
         'A'
     )
@@ -182,7 +214,26 @@ workflow PCAPROFILER {
     /// MODULE: IRFinder BAM
     ///
 
-    IRFINDER_PROCESS_BAM(ch_orig_bam, PREPARE_GENOME.out.irfinder_ref)
+    IRFINDER_PROCESS_BAM(ch_orig_bam, ch_irfinder_ref)
+    ch_versions = ch_versions.mix(IRFINDER_PROCESS_BAM.out.versions)
+
+
+
+    ///
+    /// MODULE: CTAT-Mutation
+    ///
+    SAMTOOLS_SORT(ch_orig_bam)
+    ch_sorted_bam = SAMTOOLS_SORT.out.bam
+    SAMTOOLS_INDEX(ch_sorted_bam)
+    ch_sorted_bam_bai = SAMTOOLS_INDEX.out.bai
+
+    CTAT_MUTATION_PROCESS_BAM(ch_sorted_bam.join(ch_sorted_bam_bai) , ch_ctat_ref)
+
+    ch_versions = ch_versions.mix(SAMTOOLS_SORT.out.versions)
+    ch_versions = ch_versions.mix(SAMTOOLS_INDEX.out.versions)
+    ch_versions = ch_versions.mix(CTAT_MUTATION_PROCESS_BAM.out.versions)
+
+    ///
 
     CUSTOM_DUMPSOFTWAREVERSIONS(
         ch_versions.unique { it.text }.collectFile(name: 'collated_versions.yml')

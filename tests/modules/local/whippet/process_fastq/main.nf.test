@@ -15,7 +15,7 @@ nextflow_process {
                 input[0] =  [ [single_end : false, id : 'test'] , [
                     file("./test_data/fastq/SRR14189737_1.fastq.gz") ,
                     file("./test_data/fastq/SRR14189737_2.fastq.gz")  ]]
-                input[1] = file("tests/results/whippet/whippet_index.jls")
+                input[1] = file("./test_data/REF/whippet_index.jls")
                 """
             }
         }

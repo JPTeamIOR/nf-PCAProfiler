@@ -5,99 +5,18 @@
     "description": "Preprocessing steps to extract the data for PCAProfiler",
     "type": "object",
     "definitions": {
-        "reference_creation_options": {
-            "title": "Reference creation options",
+        "optional_processes": {
+            "title": "Optional processes",
             "type": "object",
-            "description": "Additional arguments for the creation of the reference",
             "default": "",
             "properties": {
-                "mapability": {
-                    "type": "string",
-                    "description": "IRFinder mapability file"
-                },
-                "mapability_len": {
-                    "type": "integer",
-                    "description": "IRFinder mapability length ( considered when the mapability file is not defined )",
-                    "default": 75
-                },
-                "extraref": {
-                    "type": "string",
-                    "description": "IRFinder extraref"
-                },
-                "blacklist": {
-                    "type": "string",
-                    "description": "IRFinder blacklist"
-                },
-                "roi": {
-                    "type": "string",
-                    "description": "IRFinder region of interest"
-                },
-                "ribo_database_manifest": {
-                    "type": "string",
-                    "default": "${projectDir}/assets/rrna-db-defaults.txt",
-                    "description": "SortMeRNA database manifest"
-                },
-                "human_ribo": {
-                    "type": "string",
-                    "default": "None",
-                    "description": "Decontaminer human ribosomes DB"
-                },
-                "bacterial_db": {
-                    "type": "string",
-                    "default": "None",
-                    "description": "Decontaminer bacterial DB"
-                },
-                "fungi_db": {
-                    "type": "string",
-                    "default": "None",
-                    "description": "Decontaminer fungi DB"
-                },
-                "virus_db": {
-                    "type": "string",
-                    "default": "None",
-                    "description": "Decontaminer virus DB"
-                },
                 "k_len": {
                     "type": "integer",
                     "default": 31,
                     "description": "iMOKA k-mer size"
                 },
-                "whippet_tsl": {
-                    "type": "integer",
-                    "default": 1,
-                    "description": "Whippet Transcript support level filter"
-                },
-                "whippet_ref": {
-                    "type": "string",
-                    "default": "None",
-                    "description": "Whippet index"
-                }
-            }
-        },
-        "alignment_options": {
-            "title": "Alignment options",
-            "type": "object",
-            "description": "STAR alignment options",
-            "default": "",
-            "properties": {
-                "save_reference": {
-                    "type": "boolean",
-                    "description": "Save the reference generated with STAR and the other tools"
-                },
-                "fasta": {
-                    "type": "string",
-                    "description": "Reference genome from GENCODE in fasta format"
-                },
-                "gtf": {
-                    "type": "string",
-                    "description": "GTF of the reference annotation in GENCODE format"
-                },
-                "star_index": {
-                    "type": "string",
-                    "description": "Location of the star index"
-                },
-                "irfinder_ref": {
-                    "type": "string"
+                "extract_kmers": {
+                    "type": "boolean"
                 }
             }
         },
@@ -138,6 +57,19 @@
                     "type": "string",
                     "description": "MultiQC report title. Printed as page header, used for filename if not otherwise specified.",
                     "fa_icon": "fas fa-file-signature"
+                },
+                "conatminant_method": {
+                    "type": "string",
+                    "default": "all",
+                    "description": "Can be all, pathoscope or decontaminer"
+                },
+                "save_alignments": {
+                    "type": "boolean",
+                    "description": "Save the bam files"
+                },
+                "ref_dir": {
+                    "type": "string",
+                    "default": null
                 }
             }
         },
@@ -343,10 +275,7 @@
     },
     "allOf": [
         {
-            "$ref": "#/definitions/reference_creation_options"
-        },
-        {
-            "$ref": "#/definitions/alignment_options"
+            "$ref": "#/definitions/optional_processes"
         },
         {
             "$ref": "#/definitions/input_output_options"

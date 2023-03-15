@@ -1,0 +1,27 @@
+nextflow_process {
+
+    name "Test Process STARFUSION_PROCESS"
+    script "modules/local/star-fusion/main.nf"
+    process "STARFUSION_PROCESS"
+
+    test("Should run without failures") {
+
+        when {
+            params {
+                outdir = "tests/results"
+            }
+            process {
+                """
+                input[0] =  file("test_data/test.Chimeric.out.junction")
+                input[1] =  file("test_data/REF/ctat_genome_lib_build_dir/")
+                """
+            }
+        }
+
+        then {
+            assert process.success
+        }
+
+    }
+
+}

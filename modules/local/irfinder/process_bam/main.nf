@@ -24,6 +24,7 @@ process IRFINDER_PROCESS_BAM {
     IRFinder BAM  \\
         -r $irfinder_ref \\
         -d ./results/ \\
+        $args \\
         $unsorted_bam
 
     cat <<-END_VERSIONS > versions.yml
