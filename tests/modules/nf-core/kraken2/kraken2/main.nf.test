@@ -1,0 +1,31 @@
+nextflow_process {
+
+    name "Test Process KRAKEN2"
+    script "modules/nf-core/kraken2/kraken2/main.nf"
+    process "KRAKEN2_KRAKEN2"
+
+    test("Should run without failures") {
+
+        when {
+            params {
+                outdir = "tests/results"
+            }
+            process {
+                """
+                input[0] = [ [single_end : false, id : 'test'] , [
+                    file("test_data/decontaminer/fastq/SRR14189737.unmapped_1.fastq.gz"),
+                    file("test_data/decontaminer/fastq/SRR14189737.unmapped_2.fastq.gz")]]
+                input[1] = file("test_data/REF/Kraken2/")
+                input[2] = false
+                input[3] = false
+                """
+            }
+        }
+
+        then {
+            assert process.success
+        }
+
+    }
+
+}

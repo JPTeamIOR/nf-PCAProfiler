@@ -39,5 +39,17 @@ if [[ $1 == "cm" ]]; then
     exit
 fi
 
-echo "test.sh [dc|wg|wp|imoka|align|sf|cm]"
+
+if [[ $1 == "k2" ]]; then
+    nf-test test tests/modules/nf-core/kraken2/kraken2/main.nf.test --profile singularity
+    exit
+fi
+
+
+if [[ $1 == "br" ]]; then
+    nf-test test tests/modules/nf-core/bracken/bracken/main.nf.test --profile singularity
+    exit
+fi
+
+echo "test.sh [dc|wg|wp|imoka|align|sf|cm|k2|br]"
 

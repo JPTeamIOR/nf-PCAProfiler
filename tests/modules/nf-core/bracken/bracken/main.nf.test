@@ -1,0 +1,28 @@
+nextflow_process {
+
+    name "Test Process BRACKEN"
+    script "modules/nf-core/bracken/bracken/main.nf"
+    process "BRACKEN_BRACKEN"
+
+    test("Should run without failures") {
+
+        when {
+            params {
+                outdir = "tests/results"
+            }
+            process {
+                """
+                input[0] = [ [single_end : false, id : 'test'] , [
+                    file("test_data/kraken2_report/test.kraken2.report.txt")]]
+                input[1] = file("test_data/REF/Kraken2/")
+                """
+            }
+        }
+
+        then {
+            assert process.success
+        }
+
+    }
+
+}

@@ -11,8 +11,11 @@ process CTAT_MUTATION_PROCESS_BAM {
     path ctat_ref
 
     output:
-    path "./results"    , emit: results
-    path "versions.yml" , emit: versions
+    path "results/${meta.id}.vcf.gz"    , emit: vcf
+    path 'results/*classifier.vcf.gz'    , emit: vcf_filtered
+    path 'results/*cancer.vcf'    , emit: vcf_cancer
+    path 'results/*cancer.tsv'    , emit: tsv_cancer
+    path 'versions.yml' , emit: versions
 
     when:
     task.ext.when == null || task.ext.when

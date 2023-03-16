@@ -199,7 +199,7 @@ workflow PCAPROFILER {
     ///
     /// MODULE: Quantify using Salmon
     ///
-    //
+
     SALMON_QUANT(
         ch_bam_transcript,
         ch_dummy_file,
@@ -216,8 +216,6 @@ workflow PCAPROFILER {
 
     IRFINDER_PROCESS_BAM(ch_orig_bam, ch_irfinder_ref)
     ch_versions = ch_versions.mix(IRFINDER_PROCESS_BAM.out.versions)
-
-
 
     ///
     /// MODULE: CTAT-Mutation
