@@ -81,7 +81,6 @@ for fname in ${filter_rules} ${annot_lib} ${irf_mapability} ${irf_spike} ; do
     fi
 done
 
-exit 1
 
 reference_gtf="${OUTDIR}/gencode_v${GENCODE_VERSION}/gencode.v${GENCODE_VERSION}.annotation.gtf"
 reference_genome="${OUTDIR}/gencode_v${GENCODE_VERSION}/GRCh38.primary_assembly.genome.fa"
@@ -110,7 +109,9 @@ PTS_IMG=${OUTDIR}/singularity/pathoscope2.img
 
 
 
-wget -O ${SF_IMG} STAR_FUSION_IMG
+wget -O ${SF_IMG} $STAR_FUSION_IMG
+
+cd $OUTDIR
 
 singularity exec -e ${SF_IMG} \
    /usr/local/src/STAR-Fusion/ctat-genome-lib-builder/prep_genome_lib.pl \
