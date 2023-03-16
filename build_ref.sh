@@ -1,5 +1,7 @@
 #!/bin/bash
 ### Use this script to build a reference for the pipeline
+set -e
+
 BR_VERSION=1.0
 BF_NAME="build_ref.sh"
 SCRIPT_DIR=$(dirname -- "$0" )
@@ -12,7 +14,7 @@ CTAT_LIB_SUPP="https://data.broadinstitute.org/Trinity/CTAT_RESOURCE_LIB/MUTATIO
 STAR_FUSION_IMG="https://data.broadinstitute.org/Trinity/CTAT_SINGULARITY/STAR-Fusion/star-fusion.v1.12.0.simg"
 CTAT_MUT_IMG="https://data.broadinstitute.org/Trinity/CTAT_SINGULARITY/CTAT_MUTATIONS/ctat_mutations.v3.3.1.simg"
 K2_PLUSPF="https://genome-idx.s3.amazonaws.com/kraken/k2_pluspf_20221209.tar.gz"
-
+IRFINDER_IMG="https://github.com/RitchieLabIGH/IRFinder/releases/download/v2.0.1/IRFinder"
 
 help(){
     echo "Usage: ${BF_NAME} [-g|--gencode-version][-o|--outdir][-h|--help][-v|--version]
@@ -107,9 +109,10 @@ IR_IMG=${OUTDIR}/singularity/irfinder.img
 W_IMG=${OUTDIR}/singularity/whippet.img
 PTS_IMG=${OUTDIR}/singularity/pathoscope2.img
 
-
-
-wget -O ${SF_IMG} $STAR_FUSION_IMG
+[ -f ${IR_IMG} ] || wget -O ${IR_IMG} $IRFINDER_IMG
+[ -f ${W_IMG} ] || wget -O ${W_IMG} $WHIPPET_IMG
+[ -f ${CM_IMG} ] || wget -O ${CM_IMG} $CTAT_MUT_IMG
+[ -f ${SF_IMG} ] || wget -O ${SF_IMG} $STAR_FUSION_IMG
 
 cd $OUTDIR
 
@@ -127,10 +130,10 @@ singularity exec -e ${SF_IMG} \
 CTAT_REF=$(realpath ./ctat_genome_lib_build_dir)
 STAR_REF=$(realpath ./STAR/ )
 ln -s ${CTAT_REF}/ref_genome.fa.star.idx ${STAR_REF}
-rm -fr ${SF_IMG}
+
 
 ### Add CTAT Mutation Lib Supplement
-wget -O ${CM_IMG} $CTAT_MUT_IMG
+
 cd ${CTAT_REF}
 wget -O ./mutation_lib_supplement.tar.gz $CTAT_LIB_SUPP
 tar xvf ./mutation_lib_supplement.tar.gz
@@ -148,10 +151,7 @@ singularity exec -e ${CM_IMG} oc config md ${OPEN_CRAVAT}
 singularity exec -e ${CM_IMG} oc module install-base
 singularity exec -e ${CM_IMG} oc module install --yes vest chasmplus vcfreporter mupit clinvar
 
-rm -fr ${CM_IMG}
 
-
-wget -O ${IR_IMG} https://github.com/RitchieLabIGH/IRFinder/releases/download/v2.0.1/IRFinder
 
 singularity exec -e ${IR_IMG} \
    BuildRefFromSTARRef -l \
@@ -163,17 +163,17 @@ singularity exec -e ${IR_IMG} \
       -M ${irf_mapability} \
       -x ${STAR_REF}
 
-rm -fr ${IR_IMG}
+
 
 ### Whippet ref generation
 
 WHIPPET_IMG="https://github.com/JPTeamIOR/nf-PCAProfiler/releases/download/v0.1/Whippet.sif"
 
-wget -O ${W_IMG} $WHIPPET_IMG
+
 singularity exec -e ${W_IMG} gawk -v lev="$WHIPPET_TSL" ' $3 == "exon" { if ( match($0, /transcript_support_level "([0-9]+)"/ , ary) ) { if ( ary[1] <= lev ) { print }  }   } ' $reference_gtf > ${reference_gtf}.filtered.gtf
 singularity exec -e ${W_IMG} whippet-index.jl --fasta $reference_genome --gtf ${reference_gtf}.filtered.gtf -x ./whippet_index
 
-rm -fr ${W_IMG} ${reference_gtf}.filtered.gtf
+rm -fr ${reference_gtf}.filtered.gtf
 
 ### Decontaminer ref is to be downloaded manually from gdrive ( probably we will exclude it)
 
