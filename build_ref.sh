@@ -122,6 +122,8 @@ cd $OUTDIR
 ### Need to download the dfamdb due to issues with url ( in package is without www and it doens't work anymore)
 DFAM_DB=${OUTDIR}/homo_sapiens_dfam.hmm
 [ -f $DFAM_DB ] || wget -O $DFAM_DB $DFAM_DB_URL
+singularity exec -e ${SF_IMG} hmmpress $DFAM_DB
+
 
 singularity exec -e ${SF_IMG} \
    /usr/local/src/STAR-Fusion/ctat-genome-lib-builder/prep_genome_lib.pl \
@@ -198,6 +200,10 @@ while read line ; do
     wget $line
 done < ${SCRIPT_DIR}/assets/rrna-db-defaults.txt
 
+
+## cleanup
+
+rm -fr ${OUTDIR}/singularity $DFAM_DB
 
 cd $BASE_DIR
 
