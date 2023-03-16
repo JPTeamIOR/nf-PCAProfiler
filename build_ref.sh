@@ -10,6 +10,8 @@ WHIPPET_TSL=1
 BASE_DIR=$(realpath ./)
 
 CTAT_LIB_SUPP="https://data.broadinstitute.org/Trinity/CTAT_RESOURCE_LIB/MUTATION_LIB_SUPPLEMENT/GRCh38.mutation_lib_supplement.Jul272020.tar.gz"
+DFAM_DB_URL="https://www.dfam.org/releases/Dfam_3.7/infrastructure/dfamscan/homo_sapiens_dfam.hmm"
+
 
 STAR_FUSION_IMG="https://data.broadinstitute.org/Trinity/CTAT_SINGULARITY/STAR-Fusion/star-fusion.v1.12.0.simg"
 CTAT_MUT_IMG="https://data.broadinstitute.org/Trinity/CTAT_SINGULARITY/CTAT_MUTATIONS/ctat_mutations.v3.3.1.simg"
@@ -117,6 +119,10 @@ PTS_IMG=${OUTDIR}/singularity/pathoscope2.img
 
 cd $OUTDIR
 
+### Need to download the dfamdb due to issues with url ( in package is without www and it doens't work anymore)
+DFAM_DB=${OUTDIR}/homo_sapiens_dfam.hmm
+[ -f $DFAM_DB ] || wget -O $DFAM_DB $DFAM_DB_URL
+
 singularity exec -e ${SF_IMG} \
    /usr/local/src/STAR-Fusion/ctat-genome-lib-builder/prep_genome_lib.pl \
       --genome_fa ${reference_genome} \
@@ -124,7 +130,7 @@ singularity exec -e ${SF_IMG} \
       --fusion_annot_lib ${annot_lib} \
       --annot_filter_rule ${filter_rules} \
       --pfam_db current \
-      --dfam_db human \
+      --dfam_db $DFAM_DB \
       --CPU ${THREADS} \
       --human_gencode_filter
 
