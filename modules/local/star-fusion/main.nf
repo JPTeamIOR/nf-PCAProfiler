@@ -11,7 +11,7 @@ process STARFUSION_PROCESS {
     path ctat_ref
 
     output:
-    tuple val(meta), path("${prefix}") , emit: results
+    tuple val(meta), path("${prefix}/*.tsv") , emit: results
     path "versions.yml" , emit: versions
 
     when:

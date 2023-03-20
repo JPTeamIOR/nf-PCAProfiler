@@ -55,7 +55,7 @@ process DECONTAMINER {
         }
     }
     if (fungi) {
-        fungi_process = " filterBlastInfo.sh -i ./results/RESULTS/FUNGI/ -s $pairing_arg "
+        fungi_process = "filterBlastInfo.sh -i ./results/RESULTS/FUNGI/ -s $pairing_arg "
         if (!fungi_db.exists()) {
             error "$fungi_db doesn't exists"
         }

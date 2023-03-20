@@ -132,7 +132,7 @@ if ! [ -f ${LOG_DIR}/.hmmpress.done ]; then
     ### Need to download the dfamdb due to issues with url ( in package is without www and it doens't work anymore)
     DFAM_DB=${OUTDIR}/homo_sapiens_dfam.hmm
     [ -f $DFAM_DB ] || wget -O $DFAM_DB $DFAM_DB_URL
-    singularity exec -e ${SF_IMG} hmmpress $DFAM_DB
+    singularity exec -e ${SF_IMG} hmmpress $DFAM_DB > ${LOG_DIR}/hmmpress.stdout 2> ${LOG_DIR}/hmmpress.stderr
     rm -fr $DFAM_DB
     touch ${LOG_DIR}/.hmmpress.done
 fi
@@ -148,7 +148,7 @@ if ! [ -f ${LOG_DIR}/.prep_genome_lib.done ]; then
             --pfam_db current \
             --dfam_db $DFAM_DB \
             --CPU ${THREADS} \
-            --human_gencode_filter
+            --human_gencode_filter > ${LOG_DIR}/STAR-Fusion.stdout 2> ${LOG_DIR}/STAR-Fusion.stderr
 
     CTAT_REF=$(realpath ./ctat_genome_lib_build_dir)
     STAR_REF=$(realpath ./STAR/ )
@@ -171,7 +171,7 @@ fi
 
 if ! [ -f ${LOG_DIR}/.ctat_lib_integration.done ]; then
     singularity exec -e ${CM_IMG} /usr/local/src/ctat-mutations/mutation_lib_prep/ctat-mutation-lib-integration.py \
-        --genome_lib_dir ${CTAT_REF}
+        --genome_lib_dir ${CTAT_REF} > ${LOG_DIR}/ctat-mutation-lib-integration.stdout 2> ${LOG_DIR}/ctat-mutation-lib-integration.stderr
     touch ${LOG_DIR}/.ctat_lib_integration.done
 fi
 
@@ -179,9 +179,17 @@ fi
 OPEN_CRAVAT="${CTAT_REF}/ctat_mutation_lib/cravat"
 if ! [ -f ${LOG_DIR}/.open_cravat.done ]; then
    mkdir -p ${OPEN_CRAVAT}
-   singularity exec -B ${OPEN_CRAVAT}:/mnt/modules/ -e ${CM_IMG} oc module install-base
-   singularity exec -B ${OPEN_CRAVAT}:/mnt/modules/ -e ${CM_IMG} oc module install --yes vest chasmplus vcfreporter mupit clinvar
+   singularity exec -B ${OPEN_CRAVAT}:/mnt/modules/ -e ${CM_IMG} oc module install-base > ${LOG_DIR}/cravat-base.stdout 2> ${LOG_DIR}/cravat-base.stderr
+   singularity exec -B ${OPEN_CRAVAT}:/mnt/modules/ -e ${CM_IMG} oc module install --yes vest chasmplus vcfreporter mupit clinvar > ${LOG_DIR}/cravat-module.stdout 2> ${LOG_DIR}/cravat-module.stderr
    touch ${LOG_DIR}/.open_cravat.done
+fi
+
+### Cleanup of CTAT-ref
+
+if ! [-f ${LOG_DIR}/.ctat_cleanup.done ]; then
+   rm -fr ${OUTDIR}/ref_annot* ${OUTDIR}/pipeliner*  ${OUTDIR}/homo_sapiens_dfam* ${OUTDIR}/Pfam-A.*
+   rm -fr ${OUTDIR}/_* ${OUTDIR}/PFAM* ${OUTDIR}/para.mask.list
+   touch ${LOG_DIR}/.ctat_cleanup.done
 fi
 
 if ! [ -f ${LOG_DIR}/.irfinder.done ]; then
@@ -193,7 +201,7 @@ if ! [ -f ${LOG_DIR}/.irfinder.done ]; then
           -r ./IRFinder/ \
           -e ${irf_spike} \
           -M ${irf_mapability} \
-          -x ${STAR_REF}
+          -x ${STAR_REF} > ${LOG_DIR}/IRFinder.stdout 2> ${LOG_DIR}/IRFinder.stderr
     touch ${LOG_DIR}/.irfinder.done
 fi
 
@@ -203,7 +211,7 @@ fi
 
 if ! [ -f ${LOG_DIR}/.whippet.done ]; then
     singularity exec -e ${W_IMG} gawk -v lev="$WHIPPET_TSL" ' $3 == "exon" { if ( match($0, /transcript_support_level "([0-9]+)"/ , ary) ) { if ( ary[1] <= lev ) { print }  }   } ' $reference_gtf > ${reference_gtf}.filtered.gtf
-    singularity exec -e ${W_IMG} whippet-index.jl --fasta $reference_genome --gtf ${reference_gtf}.filtered.gtf -x ./whippet_index
+    singularity exec -e ${W_IMG} whippet-index.jl --fasta $reference_genome --gtf ${reference_gtf}.filtered.gtf -x ./whippet_index > ${LOG_DIR}/Whippet.stdout 2> ${LOG_DIR}/Whippet.stderr
     rm -fr ${reference_gtf}.filtered.gtf
     touch ${LOG_DIR}/.whippet.done
 fi
@@ -215,7 +223,7 @@ if ! [ -f ${LOG_DIR}/.kraken2.done ]; then
     mkdir ${OUTDIR}/Kraken2/
     wget -O ${OUTDIR}/Kraken2/k2_pluspf.tar.gz $K2_PLUSPF
     cd ${OUTDIR}/Kraken2/
-    tar k2_pluspf.tar.gz
+    tar xvf k2_pluspf.tar.gz
     rm k2_pluspf.tar.gz
     touch ${LOG_DIR}/.kraken2.done
 fi
