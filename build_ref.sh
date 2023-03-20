@@ -117,12 +117,12 @@ PTS_IMG=${OUTDIR}/singularity/pathoscope2.img
 PY_IMG=${OUTDIR}/singularity/python.img
 GFR_IMG=${OUTDIR}/singularity/gffread.img
 
-[ -f ${IR_IMG} ] || wget -O ${IR_IMG} $IRFINDER_IMG
-[ -f ${W_IMG} ] || wget -O ${W_IMG} $WHIPPET_IMG
-[ -f ${CM_IMG} ] || wget -O ${CM_IMG} $CTAT_MUT_IMG
-[ -f ${SF_IMG} ] || wget -O ${SF_IMG} $STAR_FUSION_IMG
-[ -f ${PY_IMG} ] || wget -O ${PY_IMG} $PYTHON_IMG
-[ -f ${GFR_IMG} ] || wget -O ${GFR_IMG} $GFFREAD_IMG
+
+
+
+
+
+
 
 cd $OUTDIR
 LOG_DIR="${OUTDIR}/logs/"
@@ -132,13 +132,14 @@ if ! [ -f ${LOG_DIR}/.hmmpress.done ]; then
     ### Need to download the dfamdb due to issues with url ( in package is without www and it doens't work anymore)
     DFAM_DB=${OUTDIR}/homo_sapiens_dfam.hmm
     [ -f $DFAM_DB ] || wget -O $DFAM_DB $DFAM_DB_URL
+    [ -f ${SF_IMG} ] || wget -O ${SF_IMG} $STAR_FUSION_IMG
     singularity exec -e ${SF_IMG} hmmpress $DFAM_DB > ${LOG_DIR}/hmmpress.stdout 2> ${LOG_DIR}/hmmpress.stderr
     rm -fr $DFAM_DB
     touch ${LOG_DIR}/.hmmpress.done
 fi
 
 if ! [ -f ${LOG_DIR}/.prep_genome_lib.done ]; then
-
+    [ -f ${SF_IMG} ] || wget -O ${SF_IMG} $STAR_FUSION_IMG
     singularity exec -e ${SF_IMG} \
         /usr/local/src/STAR-Fusion/ctat-genome-lib-builder/prep_genome_lib.pl \
             --genome_fa ${reference_genome} \
@@ -170,6 +171,7 @@ if ! [ -f ${LOG_DIR}/.mutation_lib_supplement.done ]; then
 fi
 
 if ! [ -f ${LOG_DIR}/.ctat_lib_integration.done ]; then
+    [ -f ${CM_IMG} ] || wget -O ${CM_IMG} $CTAT_MUT_IMG
     singularity exec -e ${CM_IMG} /usr/local/src/ctat-mutations/mutation_lib_prep/ctat-mutation-lib-integration.py \
         --genome_lib_dir ${CTAT_REF} > ${LOG_DIR}/ctat-mutation-lib-integration.stdout 2> ${LOG_DIR}/ctat-mutation-lib-integration.stderr
     touch ${LOG_DIR}/.ctat_lib_integration.done
@@ -179,6 +181,7 @@ fi
 OPEN_CRAVAT="${CTAT_REF}/ctat_mutation_lib/cravat"
 if ! [ -f ${LOG_DIR}/.open_cravat.done ]; then
    mkdir -p ${OPEN_CRAVAT}
+   [ -f ${CM_IMG} ] || wget -O ${CM_IMG} $CTAT_MUT_IMG
    singularity exec -B ${OPEN_CRAVAT}:/mnt/modules/ -e ${CM_IMG} oc module install-base > ${LOG_DIR}/cravat-base.stdout 2> ${LOG_DIR}/cravat-base.stderr
    singularity exec -B ${OPEN_CRAVAT}:/mnt/modules/ -e ${CM_IMG} oc module install --yes vest chasmplus vcfreporter mupit clinvar > ${LOG_DIR}/cravat-module.stdout 2> ${LOG_DIR}/cravat-module.stderr
    touch ${LOG_DIR}/.open_cravat.done
@@ -193,6 +196,7 @@ if ! [-f ${LOG_DIR}/.ctat_cleanup.done ]; then
 fi
 
 if ! [ -f ${LOG_DIR}/.irfinder.done ]; then
+    [ -f ${IR_IMG} ] || wget -O ${IR_IMG} $IRFINDER_IMG
     singularity exec -e ${IR_IMG} IRFinder \
         BuildRefFromSTARRef -l \
           -f ${reference_genome} \
@@ -210,6 +214,7 @@ fi
 ### Whippet ref generation
 
 if ! [ -f ${LOG_DIR}/.whippet.done ]; then
+    [ -f ${W_IMG} ] || wget -O ${W_IMG} $WHIPPET_IMG
     singularity exec -e ${W_IMG} gawk -v lev="$WHIPPET_TSL" ' $3 == "exon" { if ( match($0, /transcript_support_level "([0-9]+)"/ , ary) ) { if ( ary[1] <= lev ) { print }  }   } ' $reference_gtf > ${reference_gtf}.filtered.gtf
     singularity exec -e ${W_IMG} whippet-index.jl --fasta $reference_genome --gtf ${reference_gtf}.filtered.gtf -x ./whippet_index > ${LOG_DIR}/Whippet.stdout 2> ${LOG_DIR}/Whippet.stderr
     rm -fr ${reference_gtf}.filtered.gtf
@@ -241,6 +246,8 @@ fi
 ## produce the filtered gtf and fasta genes
 
 if ! [ -f ${LOG_DIR}/.pipeline_files.done ]; then
+    [ -f ${PY_IMG} ] || wget -O ${PY_IMG} $PYTHON_IMG
+    [ -f ${GFR_IMG} ] || wget -O ${GFR_IMG} $GFFREAD_IMG
     cd ${OUTDIR}
     cp ${SCRIPT_DIR}/bin/filter_gtf_for_genes_in_genome.py ./
     singularity exec -e ${PY_IMG} ./filter_gtf_for_genes_in_genome.py --gtf $reference_gtf --fasta $reference_genome -o ./filtered_genes.gtf > ${LOG_DIR}/filter_gtf_for_genes_in_genome.stdout 2> ${LOG_DIR}/filter_gtf_for_genes_in_genome.stderr
