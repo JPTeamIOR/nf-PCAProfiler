@@ -242,7 +242,8 @@ fi
 
 if ! [ -f ${LOG_DIR}/.pipeline_files.done ]; then
     cd ${OUTDIR}
-    singularity exec -e ${PY_IMG} ${SCRIPT_DIR}/bin/filter_gtf_for_genes_in_genome.py --gtf $reference_gtf --fasta $reference_genome -o ./filtered_genes.gtf
+    cp ${SCRIPT_DIR}/bin/filter_gtf_for_genes_in_genome.py ./
+    singularity exec -e ${PY_IMG} filter_gtf_for_genes_in_genome.py --gtf $reference_gtf --fasta $reference_genome -o ./filtered_genes.gtf
     singularity exec -e ${GFR_IMG} gffread -w ./transcripts.fa -g $reference_genome ./filtered_genes.gtf
     touch ${LOG_DIR}/.pipeline_files.done
 fi
