@@ -4,7 +4,7 @@ set -e
 
 BR_VERSION=1.0
 BF_NAME="build_ref.sh"
-SCRIPT_DIR=$(dirname -- "$0" )
+SCRIPT_DIR=$(realpath $(dirname -- "$0" ))
 THREADS=4
 WHIPPET_TSL=1
 BASE_DIR=$(realpath ./)
