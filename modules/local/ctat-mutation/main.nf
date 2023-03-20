@@ -3,8 +3,9 @@ process CTAT_MUTATION_PROCESS_BAM {
     label 'process_medium'
 
     container "${ workflow.containerEngine == 'singularity' && !task.ext.singularity_pull_docker_container ?
-        'https://data.broadinstitute.org/Trinity/CTAT_SINGULARITY/CTAT_MUTATIONS/ctat_mutations.v3.3.1.simg' :
-        'trinityctat/ctat_mutations:3.3.1' }"
+        'https://pcaprofilertest.tk/static/ctat_mutations.v3.3.1.simg' :
+        'cloxd/ctat-mutations:3.3.1' }"
+    containerOptions "${workflow.containerEngine == 'singularity' ? '-B ' : '--volume '}${ctat_ref}/ctat_mutation_lib/cravat/:/mnt/modules/"
 
     input:
     tuple val(meta), path(bam) , path(bai)

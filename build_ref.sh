@@ -176,14 +176,13 @@ if ! [ -f ${LOG_DIR}/.ctat_lib_integration.done ]; then
 fi
 
 ### Add Open-CRAVAT - created directly on the image
-# OPEN_CRAVAT="${CTAT_REF}/ctat_mutation_lib/cravat"
-# if ! [ -f ${LOG_DIR}/.open_cravat.done ]; then
-#    mkdir -p ${OPEN_CRAVAT}
-#    singularity exec -e ${CM_IMG} oc config md ${OPEN_CRAVAT}
-#    singularity exec -e ${CM_IMG} oc module install-base
-#    singularity exec -e ${CM_IMG} oc module install --yes vest chasmplus vcfreporter mupit clinvar
-#    touch ${LOG_DIR}/.open_cravat.done
-# fi
+OPEN_CRAVAT="${CTAT_REF}/ctat_mutation_lib/cravat"
+if ! [ -f ${LOG_DIR}/.open_cravat.done ]; then
+   mkdir -p ${OPEN_CRAVAT}
+   singularity exec -B ${OPEN_CRAVAT}:/mnt/modules/ -e ${CM_IMG} oc module install-base
+   singularity exec -B ${OPEN_CRAVAT}:/mnt/modules/ -e ${CM_IMG} oc module install --yes vest chasmplus vcfreporter mupit clinvar
+   touch ${LOG_DIR}/.open_cravat.done
+fi
 
 if ! [ -f ${LOG_DIR}/.irfinder.done ]; then
     singularity exec -e ${IR_IMG} \
