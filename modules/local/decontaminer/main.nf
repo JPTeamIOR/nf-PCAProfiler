@@ -17,7 +17,7 @@ process DECONTAMINER {
     output:
 
     path  'versions.yml'           , emit: versions
-    path 'results', emit : results
+    path 'results/RESULTS/', emit : results
 
     when:
     task.ext.when == null || task.ext.when

@@ -14,7 +14,7 @@ DFAM_DB_URL="https://www.dfam.org/releases/Dfam_3.7/infrastructure/dfamscan/homo
 
 
 STAR_FUSION_IMG="https://data.broadinstitute.org/Trinity/CTAT_SINGULARITY/STAR-Fusion/star-fusion.v1.12.0.simg"
-CTAT_MUT_IMG="https://data.broadinstitute.org/Trinity/CTAT_SINGULARITY/CTAT_MUTATIONS/ctat_mutations.v3.3.1.simg"
+CTAT_MUT_IMG="https://pcaprofilertest.tk/static/ctat_mutations.v3.3.1.simg"
 K2_PLUSPF="https://genome-idx.s3.amazonaws.com/kraken/k2_pluspf_20221209.tar.gz"
 IRFINDER_IMG="https://github.com/RitchieLabIGH/IRFinder/releases/download/v2.0.1/IRFinder"
 WHIPPET_IMG="https://github.com/JPTeamIOR/nf-PCAProfiler/releases/download/v0.1/Whippet.sif"
@@ -185,7 +185,7 @@ if ! [ -f ${LOG_DIR}/.open_cravat.done ]; then
 fi
 
 if ! [ -f ${LOG_DIR}/.irfinder.done ]; then
-    singularity exec -e ${IR_IMG} \
+    singularity exec -e ${IR_IMG} IRFinder \
         BuildRefFromSTARRef -l \
           -f ${reference_genome} \
           -g ${reference_gtf} \
