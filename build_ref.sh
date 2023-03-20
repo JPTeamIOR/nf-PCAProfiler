@@ -125,14 +125,15 @@ cd $OUTDIR
 LOG_DIR="${OUTDIR}/logs/"
 mkdir -p ${LOG_DIR}
 
+DFAM_DB=${OUTDIR}/homo_sapiens_dfam.hmm
 if ! [ -f ${LOG_DIR}/.hmmpress.done ]; then
     ### Need to download the dfamdb due to issues with url ( in package is without www and it doens't work anymore)
-    DFAM_DB=${OUTDIR}/homo_sapiens_dfam.hmm
     [ -f $DFAM_DB ] || wget -O $DFAM_DB $DFAM_DB_URL
     [ -f ${SF_IMG} ] || wget -O ${SF_IMG} $STAR_FUSION_IMG
     singularity exec -e ${SF_IMG} hmmpress $DFAM_DB > ${LOG_DIR}/hmmpress.stdout 2> ${LOG_DIR}/hmmpress.stderr
     touch ${LOG_DIR}/.hmmpress.done
 fi
+
 
 if ! [ -f ${LOG_DIR}/.prep_genome_lib.done ]; then
     [ -f ${SF_IMG} ] || wget -O ${SF_IMG} $STAR_FUSION_IMG
