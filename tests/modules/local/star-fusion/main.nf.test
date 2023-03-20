@@ -12,7 +12,7 @@ nextflow_process {
             }
             process {
                 """
-                input[0] =  file("test_data/test.Chimeric.out.junction")
+                input[0] =  [ [single_end : false, id : 'test'] , [ file("test_data/test.Chimeric.out.junction") ] ]
                 input[1] =  file("test_data/REF/ctat_genome_lib_build_dir/")
                 """
             }

@@ -6,18 +6,12 @@
 
 def summary_params = NfcoreSchema.paramsSummaryMap(workflow, params)
 
-// Validate input parameters
+// Validate input parameters in lib/WorkflowPcaprofiler.groovy
 WorkflowPcaprofiler.initialise(params, log)
-
-// Check input path parameters to see if they exist
 def checkPathParamList = [ params.input, params.multiqc_config, params.ref_dir ]
 for (param in checkPathParamList) { if (param) { file(param, checkIfExists: true) } }
 
-if (params.conatminant_method ==~ /all|kraken2|decontaminer/) {
-    error 'Contaminant method must be one of all, kraken2, decontaminer'
-}
-
-// Check mandatory parameters
+// Check input path parameters to see if they exist and create the input channel
 if (params.input) { ch_input = file(params.input) } else { exit 1, 'Input samplesheet not specified!' }
 
 ch_dummy_file = file("$projectDir/assets/dummy_file.txt", checkIfExists: true)
@@ -89,17 +83,18 @@ workflow PCAPROFILER {
     //
     // SUBWORKFLOW: prepare genome
     //
-    CHECK_REFERENCE(params.ref_dir)
+    ch_ref_dir = file(params.ref_dir,  checkIfExists: true)
+    CHECK_REFERENCE(ch_ref_dir)
     ch_versions = ch_versions.mix(CHECK_REFERENCE.out.versions)
     ch_sortmerna_fastas = CHECK_REFERENCE.out.sortmerna_fastas
     ch_whippet_index = CHECK_REFERENCE.out.whippet_index
     ch_star_index = CHECK_REFERENCE.out.star_index
     ch_gtf = CHECK_REFERENCE.out.gtf
-    ch_decontaminer_ref = CHECK_REFERENCE.out.decontaminer
     ch_ctat_ref = CHECK_REFERENCE.out.ctat
     ch_transcript_fasta = CHECK_REFERENCE.out.transcript_fasta
     ch_irfinder_ref = CHECK_REFERENCE.out.irfinder_ref
     ch_kraken2_ref = CHECK_REFERENCE.out.kraken2
+
 
     //
     // SUBWORKFLOW: Read in samplesheet, validate and stage input files
@@ -170,16 +165,17 @@ workflow PCAPROFILER {
     ///
     /// MODULE: Decontaminer
     ///
-    if (params.conatminant_method == 'all' || params.conatminant_method == 'decontaminer') {
-        ch_human_ribo_db = file("${ch_decontaminer_ref}/HUMAN_RNA").exists  ? file("${ch_decontaminer_ref}/HUMAN_RNA") : file('NO_RIBO')
-        ch_bacterial_db = file("${ch_decontaminer_ref}/HUMAN_RNA").exists  ? file("${ch_decontaminer_ref}/BACTERIA") : file('NO_BACTERIAL')
-        ch_fungi_db = file("${ch_decontaminer_ref}/HUMAN_RNA").exists  ? file("${ch_decontaminer_ref}/FUNGI") : file('NO_FUNGI')
-        ch_virus_db =  file("${ch_decontaminer_ref}/HUMAN_RNA").exists  ? file("${ch_decontaminer_ref}/VIRUSES") : file('NO_VIRUS')
-        DECONTAMINER(ch_unmapped_fastq, ch_human_ribo_db, ch_bacterial_db, ch_fungi_db, ch_virus_db, false)
+    if (params.contaminant_method == 'all' || params.contaminant_method == 'decontaminer') {
+        DECONTAMINER(   ch_unmapped_fastq,
+                        CHECK_REFERENCE.out.decontaminer_human_ribo,
+                        CHECK_REFERENCE.out.decontaminer_bacterial,
+                        CHECK_REFERENCE.out.decontaminer_fungi,
+                        CHECK_REFERENCE.out.decontaminer_virus,
+                        false)
         ch_versions = ch_versions.mix(DECONTAMINER.out.versions)
     }
 
-    if (params.conatminant_method == 'all' || params.conatminant_method == 'kraken2') {
+    if (params.contaminant_method == 'all' || params.contaminant_method == 'kraken2') {
         KRAKEN2_KRAKEN2(ch_unmapped_fastq, ch_kraken2_ref, false, false)
         BRACKEN_BRACKEN(KRAKEN2_KRAKEN2.out.report, ch_kraken2_ref)
         ch_versions = ch_versions.mix(BRACKEN_BRACKEN.out.versions.first())
@@ -194,7 +190,7 @@ workflow PCAPROFILER {
         ch_junction,
         ch_ctat_ref
     )
-    ch_version = ch_version.mix(STARFUSION_PROCESS.out.versions)
+    ch_versions = ch_versions.mix(STARFUSION_PROCESS.out.versions)
 
     ///
     /// MODULE: Quantify using Salmon

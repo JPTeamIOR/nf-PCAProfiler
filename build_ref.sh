@@ -18,6 +18,9 @@ CTAT_MUT_IMG="https://data.broadinstitute.org/Trinity/CTAT_SINGULARITY/CTAT_MUTA
 K2_PLUSPF="https://genome-idx.s3.amazonaws.com/kraken/k2_pluspf_20221209.tar.gz"
 IRFINDER_IMG="https://github.com/RitchieLabIGH/IRFinder/releases/download/v2.0.1/IRFinder"
 WHIPPET_IMG="https://github.com/JPTeamIOR/nf-PCAProfiler/releases/download/v0.1/Whippet.sif"
+PYTHON_IMG='https://depot.galaxyproject.org/singularity/python:3.9--1'
+GFFREAD_IMG='https://depot.galaxyproject.org/singularity/gffread:0.12.1--h8b12597_0'
+
 
 help(){
     echo "Usage: ${BF_NAME} [-g|--gencode-version][-o|--outdir][-h|--help][-v|--version]
@@ -111,99 +114,136 @@ CM_IMG=${OUTDIR}/singularity/ctat_mut.img
 IR_IMG=${OUTDIR}/singularity/irfinder.img
 W_IMG=${OUTDIR}/singularity/whippet.img
 PTS_IMG=${OUTDIR}/singularity/pathoscope2.img
+PY_IMG=${OUTDIR}/singularity/python.img
+GFR_IMG=${OUTDIR}/singularity/gffread.img
 
 [ -f ${IR_IMG} ] || wget -O ${IR_IMG} $IRFINDER_IMG
 [ -f ${W_IMG} ] || wget -O ${W_IMG} $WHIPPET_IMG
 [ -f ${CM_IMG} ] || wget -O ${CM_IMG} $CTAT_MUT_IMG
 [ -f ${SF_IMG} ] || wget -O ${SF_IMG} $STAR_FUSION_IMG
+[ -f ${PY_IMG} ] || wget -O ${PY_IMG} $PYTHON_IMG
+[ -f ${GFR_IMG} ] || wget -O ${GFR_IMG} $GFFREAD_IMG
 
 cd $OUTDIR
+LOG_DIR="${OUTDIR}/logs/"
+mkdir -p ${LOG_DIR}
 
-### Need to download the dfamdb due to issues with url ( in package is without www and it doens't work anymore)
-DFAM_DB=${OUTDIR}/homo_sapiens_dfam.hmm
-[ -f $DFAM_DB ] || wget -O $DFAM_DB $DFAM_DB_URL
-singularity exec -e ${SF_IMG} hmmpress $DFAM_DB
+if ! [ -f ${LOG_DIR}/.hmmpress.done ]; then
+    ### Need to download the dfamdb due to issues with url ( in package is without www and it doens't work anymore)
+    DFAM_DB=${OUTDIR}/homo_sapiens_dfam.hmm
+    [ -f $DFAM_DB ] || wget -O $DFAM_DB $DFAM_DB_URL
+    singularity exec -e ${SF_IMG} hmmpress $DFAM_DB
+    rm -fr $DFAM_DB
+    touch ${LOG_DIR}/.hmmpress.done
+fi
 
+if ! [ -f ${LOG_DIR}/.prep_genome_lib.done ]; then
 
-singularity exec -e ${SF_IMG} \
-   /usr/local/src/STAR-Fusion/ctat-genome-lib-builder/prep_genome_lib.pl \
-      --genome_fa ${reference_genome} \
-      --gtf ${reference_gtf} \
-      --fusion_annot_lib ${annot_lib} \
-      --annot_filter_rule ${filter_rules} \
-      --pfam_db current \
-      --dfam_db $DFAM_DB \
-      --CPU ${THREADS} \
-      --human_gencode_filter
+    singularity exec -e ${SF_IMG} \
+        /usr/local/src/STAR-Fusion/ctat-genome-lib-builder/prep_genome_lib.pl \
+            --genome_fa ${reference_genome} \
+            --gtf ${reference_gtf} \
+            --fusion_annot_lib ${annot_lib} \
+            --annot_filter_rule ${filter_rules} \
+            --pfam_db current \
+            --dfam_db $DFAM_DB \
+            --CPU ${THREADS} \
+            --human_gencode_filter
+
+    CTAT_REF=$(realpath ./ctat_genome_lib_build_dir)
+    STAR_REF=$(realpath ./STAR/ )
+    ln -s ${CTAT_REF}/ref_genome.fa.star.idx ${STAR_REF}
+    touch ${LOG_DIR}/.prep_genome_lib.done
+fi
 
 CTAT_REF=$(realpath ./ctat_genome_lib_build_dir)
 STAR_REF=$(realpath ./STAR/ )
-ln -s ${CTAT_REF}/ref_genome.fa.star.idx ${STAR_REF}
-
 
 ### Add CTAT Mutation Lib Supplement
+if ! [ -f ${LOG_DIR}/.mutation_lib_supplement.done ]; then
+    cd ${CTAT_REF}
+    wget -O ./mutation_lib_supplement.tar.gz $CTAT_LIB_SUPP
+    tar xvf ./mutation_lib_supplement.tar.gz
+    rm -fr ./mutation_lib_supplement.tar.gz
+    cd ${OUTDIR}
+    touch ${LOG_DIR}/.mutation_lib_supplement.done
+fi
 
-cd ${CTAT_REF}
-wget -O ./mutation_lib_supplement.tar.gz $CTAT_LIB_SUPP
-tar xvf ./mutation_lib_supplement.tar.gz
-rm -fr ./mutation_lib_supplement.tar.gz
-cd ${OUTDIR}
-
-
-singularity exec -e ${CM_IMG} /usr/local/src/ctat-mutations/mutation_lib_prep/ctat-mutation-lib-integration.py \
-      --genome_lib_dir ${CTAT_REF}
+if ! [ -f ${LOG_DIR}/.ctat_lib_integration.done ]; then
+    singularity exec -e ${CM_IMG} /usr/local/src/ctat-mutations/mutation_lib_prep/ctat-mutation-lib-integration.py \
+        --genome_lib_dir ${CTAT_REF}
+    touch ${LOG_DIR}/.ctat_lib_integration.done
+fi
 
 ### Add Open-CRAVAT
 OPEN_CRAVAT="${CTAT_REF}/ctat_mutation_lib/cravat"
-mkdir -p ${OPEN_CRAVAT}
-singularity exec -e ${CM_IMG} oc config md ${OPEN_CRAVAT}
-singularity exec -e ${CM_IMG} oc module install-base
-singularity exec -e ${CM_IMG} oc module install --yes vest chasmplus vcfreporter mupit clinvar
+if ! [ -f ${LOG_DIR}/.open_cravat.done ]; then
+    mkdir -p ${OPEN_CRAVAT}
+    singularity exec -e ${CM_IMG} oc config md ${OPEN_CRAVAT}
+    singularity exec -e ${CM_IMG} oc module install-base
+    singularity exec -e ${CM_IMG} oc module install --yes vest chasmplus vcfreporter mupit clinvar
+    touch ${LOG_DIR}/.open_cravat.done
+fi
 
-
-
-singularity exec -e ${IR_IMG} \
-   BuildRefFromSTARRef -l \
-      -f ${reference_genome} \
-      -g ${reference_gtf} \
-      -t ${THREADS} \
-      -r ./IRFinder/ \
-      -e ${irf_spike} \
-      -M ${irf_mapability} \
-      -x ${STAR_REF}
+if ! [ -f ${LOG_DIR}/.irfinder.done ]; then
+    singularity exec -e ${IR_IMG} \
+        BuildRefFromSTARRef -l \
+          -f ${reference_genome} \
+          -g ${reference_gtf} \
+          -t ${THREADS} \
+          -r ./IRFinder/ \
+          -e ${irf_spike} \
+          -M ${irf_mapability} \
+          -x ${STAR_REF}
+    touch ${LOG_DIR}/.irfinder.done
+fi
 
 
 
 ### Whippet ref generation
 
-
-singularity exec -e ${W_IMG} gawk -v lev="$WHIPPET_TSL" ' $3 == "exon" { if ( match($0, /transcript_support_level "([0-9]+)"/ , ary) ) { if ( ary[1] <= lev ) { print }  }   } ' $reference_gtf > ${reference_gtf}.filtered.gtf
-singularity exec -e ${W_IMG} whippet-index.jl --fasta $reference_genome --gtf ${reference_gtf}.filtered.gtf -x ./whippet_index
-
-rm -fr ${reference_gtf}.filtered.gtf
-
+if ! [ -f ${LOG_DIR}/.whippet.done ]; then
+    singularity exec -e ${W_IMG} gawk -v lev="$WHIPPET_TSL" ' $3 == "exon" { if ( match($0, /transcript_support_level "([0-9]+)"/ , ary) ) { if ( ary[1] <= lev ) { print }  }   } ' $reference_gtf > ${reference_gtf}.filtered.gtf
+    singularity exec -e ${W_IMG} whippet-index.jl --fasta $reference_genome --gtf ${reference_gtf}.filtered.gtf -x ./whippet_index
+    rm -fr ${reference_gtf}.filtered.gtf
+    touch ${LOG_DIR}/.whippet.done
+fi
 ### Decontaminer ref is to be downloaded manually from gdrive ( probably we will exclude it)
 
 
 ### Kraken2 db
-mkdir ${OUTDIR}/Kraken2/
-wget -O ${OUTDIR}/Kraken2/k2_pluspf.tar.gz $K2_PLUSPF
-cd ${OUTDIR}/Kraken2/
-tar k2_pluspf.tar.gz
-rm k2_pluspf.tar.gz
+if ! [ -f ${LOG_DIR}/.kraken2.done ]; then
+    mkdir ${OUTDIR}/Kraken2/
+    wget -O ${OUTDIR}/Kraken2/k2_pluspf.tar.gz $K2_PLUSPF
+    cd ${OUTDIR}/Kraken2/
+    tar k2_pluspf.tar.gz
+    rm k2_pluspf.tar.gz
+    touch ${LOG_DIR}/.kraken2.done
+fi
 
 cd ${OUTDIR}
-mkdir -p ${OUTDIR}/rRNA/
 
-cd ${OUTDIR}/rRNA/
-while read line ; do
-    wget $line
-done < ${SCRIPT_DIR}/assets/rrna-db-defaults.txt
+if ! [ -f ${LOG_DIR}/.rRNA.done ]; then
+    mkdir -p ${OUTDIR}/rRNA/
+    cd ${OUTDIR}/rRNA/
+    while read line ; do
+        wget $line
+    done < ${SCRIPT_DIR}/assets/rrna-db-defaults.txt
+    touch ${LOG_DIR}/.rRNA.done
+fi
+## produce the filtered gtf and fasta genes
+
+if ! [ -f ${LOG_DIR}/.pipeline_files.done ]; then
+    cd ${OUTDIR}
+    singularity exec -e ${PY_IMG} ${SCRIPT_DIR}/bin/filter_gtf_for_genes_in_genome.py --gtf $reference_gtf --fasta $reference_genome -o ./filtered_genes.gtf
+    singularity exec -e ${GFR_IMG} gffread -w ./transcripts.fa -g $reference_genome ./filtered_genes.gtf
+    touch ${LOG_DIR}/.pipeline_files.done
+fi
 
 
 ## cleanup
 
-rm -fr ${OUTDIR}/singularity $DFAM_DB
+rm -fr ${OUTDIR}/singularity
 
 cd $BASE_DIR
 

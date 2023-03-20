@@ -17,6 +17,10 @@
                 },
                 "extract_kmers": {
                     "type": "boolean"
+                },
+                "contaminant_method": {
+                    "type": "string",
+                    "default": "all"
                 }
             }
         },
@@ -58,18 +62,13 @@
                     "description": "MultiQC report title. Printed as page header, used for filename if not otherwise specified.",
                     "fa_icon": "fas fa-file-signature"
                 },
-                "conatminant_method": {
-                    "type": "string",
-                    "default": "all",
-                    "description": "Can be all, pathoscope or decontaminer"
-                },
                 "save_alignments": {
                     "type": "boolean",
                     "description": "Save the bam files"
                 },
                 "ref_dir": {
                     "type": "string",
-                    "default": null
+                    "default": "None"
                 }
             }
         },

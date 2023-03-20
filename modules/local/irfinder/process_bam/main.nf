@@ -1,5 +1,5 @@
 process IRFINDER_PROCESS_BAM {
-    tag "$unsorted_bam"
+    tag "$meta.id"
     label 'process_medium'
 
     container "${ workflow.containerEngine == 'singularity' && !task.ext.singularity_pull_docker_container ?
@@ -24,12 +24,13 @@ process IRFINDER_PROCESS_BAM {
     IRFinder BAM  \\
         -r $irfinder_ref \\
         -d ./results/ \\
-        $args \\
-        $unsorted_bam
+        $args $unsorted_bam
+
+    gzip ./results/*.txt
 
     cat <<-END_VERSIONS > versions.yml
     "${task.process}":
-        IRFinder: \$(IRFinder --version )
+        IRFinder: \$(IRFinder --version | sed -e "s/IRFinder version: //g" )
     END_VERSIONS
     """
 }

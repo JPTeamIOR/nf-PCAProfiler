@@ -10,10 +10,8 @@ class WorkflowPcaprofiler {
     // Check and validate parameters
     //
     public static void initialise(params, log) {
-        
-
-        if (!params.fasta) {
-            log.error "Genome fasta file not specified with e.g. '--fasta genome.fa' or via a detectable config file."
+        if ( !( params.contaminant_method ==~ /all|kraken2|decontaminer/ ) ) {
+            log.error 'Contaminant method must be one of all, kraken2, decontaminer'
             System.exit(1)
         }
     }

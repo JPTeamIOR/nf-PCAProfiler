@@ -11,7 +11,7 @@ process GTF_GENE_FILTER {
     path gtf
 
     output:
-    path "*.gtf"       , emit: gtf
+    path "*_genes.gtf"       , emit: gtf
     path "versions.yml", emit: versions
 
     when:
