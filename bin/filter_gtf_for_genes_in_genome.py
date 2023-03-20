@@ -57,7 +57,7 @@ def extract_genes_in_genome(fasta, gtf_in, gtf_out):
     logger.info(
         "Extracted %d / %d lines from %s matching sequences in %s" % (n_lines_in_genome, n_total_lines, gtf_in, fasta)
     )
-    logger.info("All sequence IDs from GTF: " + ", ".join(sorted(x for x in seq_name_gtf)))
+    logger.info("All sequence IDs from GTF: " + ", ".join(sorted(x for x in seq_names_in_gtf)))
 
     logger.info("Wrote matching lines to %s" % gtf_out)
 
