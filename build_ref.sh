@@ -121,9 +121,6 @@ GFR_IMG=${OUTDIR}/singularity/gffread.img
 
 
 
-
-
-
 cd $OUTDIR
 LOG_DIR="${OUTDIR}/logs/"
 mkdir -p ${LOG_DIR}
@@ -134,7 +131,6 @@ if ! [ -f ${LOG_DIR}/.hmmpress.done ]; then
     [ -f $DFAM_DB ] || wget -O $DFAM_DB $DFAM_DB_URL
     [ -f ${SF_IMG} ] || wget -O ${SF_IMG} $STAR_FUSION_IMG
     singularity exec -e ${SF_IMG} hmmpress $DFAM_DB > ${LOG_DIR}/hmmpress.stdout 2> ${LOG_DIR}/hmmpress.stderr
-    rm -fr $DFAM_DB
     touch ${LOG_DIR}/.hmmpress.done
 fi
 
