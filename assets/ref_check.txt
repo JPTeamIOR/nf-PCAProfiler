@@ -21,7 +21,6 @@ ctat_genome_lib_build_dir/fusion_annot_lib.gz
 ctat_genome_lib_build_dir/fusion_annot_lib.idx
 ctat_genome_lib_build_dir/pfam_domains.dbm
 ctat_genome_lib_build_dir/PFAM.domtblout.dat.gz
-ctat_genome_lib_build_dir/README.md
 ctat_genome_lib_build_dir/ref_annot.cdna.fa
 ctat_genome_lib_build_dir/ref_annot.cdna.fa.idx
 ctat_genome_lib_build_dir/ref_annot.cds
