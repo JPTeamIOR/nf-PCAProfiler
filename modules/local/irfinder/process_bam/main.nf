@@ -11,11 +11,12 @@ process IRFINDER_PROCESS_BAM {
     path irfinder_ref
 
     output:
-    path "./results"    , emit: results
+    path "./${prefix}/"    , emit: results
     path "versions.yml" , emit: versions
 
     when:
     task.ext.when == null || task.ext.when
+    prefix   = task.ext.prefix ?: "${meta.id}"
 
     script:
     def args = task.ext.args ? task.ext.args : ''
@@ -23,10 +24,10 @@ process IRFINDER_PROCESS_BAM {
     """
     IRFinder BAM  \\
         -r $irfinder_ref \\
-        -d ./results/ \\
+        -d ./$prefix/ \\
         $args $unsorted_bam
 
-    gzip ./results/*.txt
+    gzip ./$prefix/*.txt
 
     cat <<-END_VERSIONS > versions.yml
     "${task.process}":

@@ -130,12 +130,16 @@ if ! [ -f ${LOG_DIR}/.hmmpress.done ]; then
     ### Need to download the dfamdb due to issues with url ( in package is without www and it doens't work anymore)
     [ -f $DFAM_DB ] || wget -O $DFAM_DB $DFAM_DB_URL
     [ -f ${SF_IMG} ] || wget -O ${SF_IMG} $STAR_FUSION_IMG
+    echo "STEP 1 - hmmpress"
     singularity exec -e ${SF_IMG} hmmpress $DFAM_DB > ${LOG_DIR}/hmmpress.stdout 2> ${LOG_DIR}/hmmpress.stderr
     touch ${LOG_DIR}/.hmmpress.done
+else
+    echo "STEP 1 - hmmpress skipped"
 fi
 
 
 if ! [ -f ${LOG_DIR}/.prep_genome_lib.done ]; then
+    echo "STEP 2 - CTAT genome lib preparation"
     [ -f ${SF_IMG} ] || wget -O ${SF_IMG} $STAR_FUSION_IMG
     singularity exec -e ${SF_IMG} \
         /usr/local/src/STAR-Fusion/ctat-genome-lib-builder/prep_genome_lib.pl \
@@ -152,6 +156,8 @@ if ! [ -f ${LOG_DIR}/.prep_genome_lib.done ]; then
     STAR_REF=$(realpath ./STAR/ )
     ln -s ${CTAT_REF}/ref_genome.fa.star.idx ${STAR_REF}
     touch ${LOG_DIR}/.prep_genome_lib.done
+else
+    echo "STEP 2 - CTAT genome lib preparation skipped"
 fi
 
 CTAT_REF=$(realpath ./ctat_genome_lib_build_dir)
@@ -159,40 +165,53 @@ STAR_REF=$(realpath ./STAR/ )
 
 ### Add CTAT Mutation Lib Supplement
 if ! [ -f ${LOG_DIR}/.mutation_lib_supplement.done ]; then
+    echo "STEP 3 - CTAT genome lib supplement preparation"
     cd ${CTAT_REF}
     wget -O ./mutation_lib_supplement.tar.gz $CTAT_LIB_SUPP
     tar xvf ./mutation_lib_supplement.tar.gz
     rm -fr ./mutation_lib_supplement.tar.gz
     cd ${OUTDIR}
     touch ${LOG_DIR}/.mutation_lib_supplement.done
+else
+    echo "STEP 3 - CTAT genome lib supplement preparation skipped"
 fi
 
 if ! [ -f ${LOG_DIR}/.ctat_lib_integration.done ]; then
+    echo "STEP 4 - CTAT genome lib supplement integration"
     [ -f ${CM_IMG} ] || wget -O ${CM_IMG} $CTAT_MUT_IMG
     singularity exec -e ${CM_IMG} /usr/local/src/ctat-mutations/mutation_lib_prep/ctat-mutation-lib-integration.py \
         --genome_lib_dir ${CTAT_REF} > ${LOG_DIR}/ctat-mutation-lib-integration.stdout 2> ${LOG_DIR}/ctat-mutation-lib-integration.stderr
     touch ${LOG_DIR}/.ctat_lib_integration.done
+else
+    echo "STEP 4 - CTAT genome lib supplement integration skipped"
 fi
 
 ### Add Open-CRAVAT - created directly on the image
 OPEN_CRAVAT="${CTAT_REF}/ctat_mutation_lib/cravat"
 if ! [ -f ${LOG_DIR}/.open_cravat.done ]; then
+    echo "STEP 5 - CTAT cravat preparation"
    mkdir -p ${OPEN_CRAVAT}
    [ -f ${CM_IMG} ] || wget -O ${CM_IMG} $CTAT_MUT_IMG
    singularity exec -B ${OPEN_CRAVAT}:/mnt/modules/ -e ${CM_IMG} oc module install-base > ${LOG_DIR}/cravat-base.stdout 2> ${LOG_DIR}/cravat-base.stderr
    singularity exec -B ${OPEN_CRAVAT}:/mnt/modules/ -e ${CM_IMG} oc module install --yes vest chasmplus vcfreporter mupit clinvar > ${LOG_DIR}/cravat-module.stdout 2> ${LOG_DIR}/cravat-module.stderr
    touch ${LOG_DIR}/.open_cravat.done
+else
+    echo "STEP 5 - CTAT cravat preparation skipped"
 fi
 
 ### Cleanup of CTAT-ref
 
 if ! [-f ${LOG_DIR}/.ctat_cleanup.done ]; then
+    echo "STEP 6 - CTAT cleanup"
    rm -fr ${OUTDIR}/ref_annot* ${OUTDIR}/pipeliner*  ${OUTDIR}/homo_sapiens_dfam* ${OUTDIR}/Pfam-A.*
    rm -fr ${OUTDIR}/_* ${OUTDIR}/PFAM* ${OUTDIR}/para.mask.list
    touch ${LOG_DIR}/.ctat_cleanup.done
+else
+    echo "STEP 6 - CTAT cleanup skipped"
 fi
 
 if ! [ -f ${LOG_DIR}/.irfinder.done ]; then
+    echo "STEP 7 - IRFinder reference creation"
     [ -f ${IR_IMG} ] || wget -O ${IR_IMG} $IRFINDER_IMG
     singularity exec -e ${IR_IMG} IRFinder \
         BuildRefFromSTARRef -l \
@@ -204,6 +223,8 @@ if ! [ -f ${LOG_DIR}/.irfinder.done ]; then
           -M ${irf_mapability} \
           -x ${STAR_REF} > ${LOG_DIR}/IRFinder.stdout 2> ${LOG_DIR}/IRFinder.stderr
     touch ${LOG_DIR}/.irfinder.done
+else
+    echo "STEP 7 - IRFinder reference creation skipped"
 fi
 
 
@@ -211,38 +232,48 @@ fi
 ### Whippet ref generation
 
 if ! [ -f ${LOG_DIR}/.whippet.done ]; then
+    echo "STEP 8 - Whippet reference creation"
     [ -f ${W_IMG} ] || wget -O ${W_IMG} $WHIPPET_IMG
     singularity exec -e ${W_IMG} gawk -v lev="$WHIPPET_TSL" ' $3 == "exon" { if ( match($0, /transcript_support_level "([0-9]+)"/ , ary) ) { if ( ary[1] <= lev ) { print }  }   } ' $reference_gtf > ${reference_gtf}.filtered.gtf
     singularity exec -e ${W_IMG} whippet-index.jl --fasta $reference_genome --gtf ${reference_gtf}.filtered.gtf -x ./whippet_index > ${LOG_DIR}/Whippet.stdout 2> ${LOG_DIR}/Whippet.stderr
     rm -fr ${reference_gtf}.filtered.gtf
     touch ${LOG_DIR}/.whippet.done
+else
+    echo "STEP 8 - Whippet reference creation skipped"
 fi
 ### Decontaminer ref is to be downloaded manually from gdrive ( probably we will exclude it)
 
 
 ### Kraken2 db
 if ! [ -f ${LOG_DIR}/.kraken2.done ]; then
+    echo "STEP 9 - Kraken2 reference download"
     mkdir ${OUTDIR}/Kraken2/
     wget -O ${OUTDIR}/Kraken2/k2_pluspf.tar.gz $K2_PLUSPF
     cd ${OUTDIR}/Kraken2/
     tar xvf k2_pluspf.tar.gz
     rm k2_pluspf.tar.gz
     touch ${LOG_DIR}/.kraken2.done
+else
+    echo "STEP 9 - Kraken2 reference download skipped"
 fi
 
 cd ${OUTDIR}
 
 if ! [ -f ${LOG_DIR}/.rRNA.done ]; then
+    echo "STEP 10 - rRNA reference download"
     mkdir -p ${OUTDIR}/rRNA/
     cd ${OUTDIR}/rRNA/
     while read line ; do
         wget $line
     done < ${SCRIPT_DIR}/assets/rrna-db-defaults.txt
     touch ${LOG_DIR}/.rRNA.done
+else
+    echo "STEP 10 - rRNA reference download skipped"
 fi
 ## produce the filtered gtf and fasta genes
 
 if ! [ -f ${LOG_DIR}/.pipeline_files.done ]; then
+    echo "STEP 11 - Transcriptome preparation"
     [ -f ${PY_IMG} ] || wget -O ${PY_IMG} $PYTHON_IMG
     [ -f ${GFR_IMG} ] || wget -O ${GFR_IMG} $GFFREAD_IMG
     cd ${OUTDIR}
@@ -251,11 +282,13 @@ if ! [ -f ${LOG_DIR}/.pipeline_files.done ]; then
     rm filter_gtf_for_genes_in_genome.py
     singularity exec -e ${GFR_IMG} gffread -w ./transcripts.fa -g $reference_genome ./filtered_genes.gtf > ${LOG_DIR}/gffread.stdout 2> ${LOG_DIR}/gffread.stderr
     touch ${LOG_DIR}/.pipeline_files.done
+else
+    echo "STEP 11 - Transcriptome preparation skipped"
 fi
 
 
 ## cleanup
-
+echo "All Done."
 rm -fr ${OUTDIR}/singularity
 
 cd $BASE_DIR
