@@ -52,7 +52,7 @@ workflow CHECK_REFERENCE {
 
     emit:
     fasta            = ch_fasta            //    path: genome.fasta
-    gtf              = ch_gtf              //    path: genome.gtf
+    gtf              = ch_filter_gtf              //    path: genome.gtf
     transcript_fasta = ch_transcript_fasta //    path: transcript.fasta
     irfinder_ref     = ch_irfinder_ref     //    path: IRFinder
     star_index       = ch_star_ref         //    path: ctat_genome_lib_build_dir/ref_genome.fa.star.idx

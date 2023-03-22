@@ -150,7 +150,7 @@ if ! [ -f ${LOG_DIR}/.prep_genome_lib.done ]; then
             --pfam_db current \
             --dfam_db $DFAM_DB \
             --CPU ${THREADS} \
-            --human_gencode_filter > ${LOG_DIR}/STAR-Fusion.stdout 2> ${LOG_DIR}/STAR-Fusion.stderr
+            --human_gencode_filter > /dev/null 2> ${LOG_DIR}/STAR-Fusion.stderr
 
     CTAT_REF=$(realpath ./ctat_genome_lib_build_dir)
     STAR_REF=$(realpath ./STAR/ )
@@ -159,6 +159,9 @@ if ! [ -f ${LOG_DIR}/.prep_genome_lib.done ]; then
 else
     echo "STEP 2 - CTAT genome lib preparation skipped"
 fi
+
+reference_gtf=$(realpath ${OUTDIR}/gencode_v${GENCODE_VERSION}/gencode.v${GENCODE_VERSION}.annotation.gtf.revised.custom.gtf )
+reference_genome=$(realpath ${OUTDIR}/gencode_v${GENCODE_VERSION}/*.genome.fa.pseudo_masked.fa )
 
 CTAT_REF=$(realpath ./ctat_genome_lib_build_dir)
 STAR_REF=$(realpath ./STAR/ )
