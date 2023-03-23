@@ -204,7 +204,7 @@ fi
 
 ### Cleanup of CTAT-ref
 
-if ! [-f ${LOG_DIR}/.ctat_cleanup.done ]; then
+if ! [ -f ${LOG_DIR}/.ctat_cleanup.done ]; then
     echo "STEP 6 - CTAT cleanup"
    rm -fr ${OUTDIR}/ref_annot* ${OUTDIR}/pipeliner*  ${OUTDIR}/homo_sapiens_dfam* ${OUTDIR}/Pfam-A.*
    rm -fr ${OUTDIR}/_* ${OUTDIR}/PFAM* ${OUTDIR}/para.mask.list
