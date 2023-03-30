@@ -1,6 +1,6 @@
 process CTAT_MUTATION_PROCESS_BAM {
     tag "$meta.id"
-    label 'process_medium'
+    label 'process_high'
 
     container "${ workflow.containerEngine == 'singularity' && !task.ext.singularity_pull_docker_container ?
         'https://pcaprofilertest.tk/static/ctat_mutations.v3.3.1.simg' :
