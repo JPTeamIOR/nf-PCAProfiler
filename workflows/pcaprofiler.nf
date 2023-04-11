@@ -54,7 +54,6 @@ include { CUSTOM_DUMPSOFTWAREVERSIONS } from '../modules/nf-core/custom/dumpsoft
 include { TRIMGALORE } from '../modules/nf-core/trimgalore/main'
 include { STAR_ALIGN } from '../modules/nf-core/star/align/main'
 include { SALMON_QUANT } from '../modules/nf-core/salmon/quant/main'
-include { SORTMERNA       } from '../modules/nf-core/sortmerna/main'
 include { KRAKEN2_KRAKEN2 } from '../modules/nf-core/kraken2/kraken2/main'
 include { BRACKEN_BRACKEN } from '../modules/nf-core/bracken/bracken/main'
 
@@ -64,6 +63,7 @@ include { DECONTAMINER } from '../modules/local/decontaminer/main'
 include { WHIPPET_PROCESS_FASTQ } from '../modules/local/whippet/process_fastq/main.nf'
 include { STARFUSION_PROCESS } from '../modules/local/star-fusion/main.nf'
 include { CTAT_MUTATION_PROCESS_BAM } from '../modules/local/ctat-mutation/main.nf'
+include { SORTMERNA       } from '../modules/local/sortmerna/main'
 
 include { SAMTOOLS_INDEX } from '../modules/nf-core/samtools/index/main'
 include { SAMTOOLS_SORT } from '../modules/nf-core/samtools/sort/main'
@@ -87,6 +87,7 @@ workflow PCAPROFILER {
     CHECK_REFERENCE(ch_ref_dir)
     ch_versions = ch_versions.mix(CHECK_REFERENCE.out.versions)
     ch_sortmerna_fastas = CHECK_REFERENCE.out.sortmerna_fastas
+    ch_sortmerna_db = CHECK_REFERENCE.out.sortmerna_db
     ch_whippet_index = CHECK_REFERENCE.out.whippet_index
     ch_star_index = CHECK_REFERENCE.out.star_index
     ch_gtf = CHECK_REFERENCE.out.gtf
@@ -123,7 +124,8 @@ workflow PCAPROFILER {
 
     SORTMERNA(
             ch_filtered_reads,
-            ch_sortmerna_fastas
+            ch_sortmerna_fastas,
+            ch_sortmerna_db
         )
         .reads
         .set { ch_filtered_reads }

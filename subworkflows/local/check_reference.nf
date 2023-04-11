@@ -19,6 +19,7 @@ workflow CHECK_REFERENCE {
     }
 
     ch_sortmerna_fastas = files("${ref_dir}/rRNA/*.fasta")
+    ch_sortmerna_fastas_db = files("${ref_dir}/rRNA/*.fasta.db*")
 
     ch_irfinder_ref = file("${ref_dir}/IRFinder/", checkIfExists : true)
     ch_ctat_ref = file("${ref_dir}/ctat_genome_lib_build_dir/", checkIfExists : true)
@@ -64,6 +65,7 @@ workflow CHECK_REFERENCE {
     decontaminer_fungi = ch_decontaminer_fungi_db
     decontaminer_virus = ch_decontaminer_virus_db
     sortmerna_fastas = ch_sortmerna_fastas //    path: rRNA/*.fasta
+    sortmerna_db = ch_sortmerna_fastas_db
 
     versions = ch_versions                     // channel: [ versions.yml ]
 }

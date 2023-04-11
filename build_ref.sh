@@ -20,7 +20,7 @@ IRFINDER_IMG="https://github.com/RitchieLabIGH/IRFinder/releases/download/v2.0.1
 WHIPPET_IMG="https://github.com/JPTeamIOR/nf-PCAProfiler/releases/download/v0.1/Whippet.sif"
 PYTHON_IMG='https://depot.galaxyproject.org/singularity/python:3.9--1'
 GFFREAD_IMG='https://depot.galaxyproject.org/singularity/gffread:0.12.1--h8b12597_0'
-
+SORTMERNA_IMG="https://depot.galaxyproject.org/singularity/sortmerna:2.1b--he860b03_4"
 
 help(){
     echo "Usage: ${BF_NAME} [-g|--gencode-version][-o|--outdir][-h|--help][-v|--version]
@@ -116,7 +116,7 @@ W_IMG=${OUTDIR}/singularity/whippet.img
 PTS_IMG=${OUTDIR}/singularity/pathoscope2.img
 PY_IMG=${OUTDIR}/singularity/python.img
 GFR_IMG=${OUTDIR}/singularity/gffread.img
-
+SMR_IMG=${OUTDIR}/singularity/sortmerna.img
 
 
 
@@ -264,10 +264,13 @@ cd ${OUTDIR}
 
 if ! [ -f ${LOG_DIR}/.rRNA.done ]; then
     echo "STEP 10 - rRNA reference download"
+    [ -f ${SMR_IMG} ] || wget -O ${SMR_IMG} $SORTMERNA_IMG
     mkdir -p ${OUTDIR}/rRNA/
     cd ${OUTDIR}/rRNA/
     while read line ; do
         wget $line
+        fname=$(echo $line | awk -F '/' '{print $NF}')
+        singularity exec -e ${SMR_IMG} indexdb_rna --ref ${fname},${fname}.db >> ${LOG_DIR}/sortmerna.stdout 2>> ${LOG_DIR}/sortmerna.stderr
     done < ${SCRIPT_DIR}/assets/rrna-db-defaults.txt
     touch ${LOG_DIR}/.rRNA.done
 else

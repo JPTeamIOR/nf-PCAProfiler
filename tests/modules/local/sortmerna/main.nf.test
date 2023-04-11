@@ -1,0 +1,30 @@
+nextflow_process {
+
+    name "Test Process SORTMERNA"
+    script "modules/local/sortmerna/main.nf"
+    process "SORTMERNA"
+
+    test("Should run without failures") {
+
+        when {
+            params {
+                outdir = "tests/results"
+            }
+            process {
+                """
+                input[0] =  [ [single_end : false, id : 'test'] , [
+                    file("./test_data/fastq/SRR14189737_1.fastq.gz") ,
+                    file("./test_data/fastq/SRR14189737_2.fastq.gz")  ]]
+                input[1] = file("./test_data/REF/rRNA/rfam-5.8s-database-id98.fasta")
+                input[2] = file("./test_data/REF/rRNA/rfam-5.8s-database-id98.fasta.db*")
+                """
+            }
+        }
+
+        then {
+            assert process.success
+        }
+
+    }
+
+}

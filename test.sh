@@ -51,5 +51,16 @@ if [[ $1 == "br" ]]; then
     exit
 fi
 
-echo "test.sh [dc|wg|wp|imoka|align|sf|cm|k2|br]"
+
+if [[ $1 == "sm" ]]; then
+    nf-test test tests/modules/local/sortmerna/main.nf.test --profile singularity
+    exit
+fi
+
+if [[ $1 == "smse" ]]; then
+    nf-test test tests/modules/local/sortmerna/main_se.nf.test --profile singularity
+    exit
+fi
+
+echo "test.sh [dc|wg|wp|imoka|align|sf|cm|k2|br|sm]"
 
