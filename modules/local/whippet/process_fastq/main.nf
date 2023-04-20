@@ -35,9 +35,9 @@ process WHIPPET_PROCESS_FASTQ {
         }
     } else {
         if ( "${reads[0]}".endsWith('.gz') ){
-            reads_arg = "<( zcat ${reads[0]} | grep . |  awk '{if ( NR %4 == 3 ) { print \"+\" } else { print } }' ) <( zcat ${reads[1]} | awk '{if ( NR %4 == 3 ) { print \"+\" } else { print } }' )"
+            reads_arg = "<( zcat ${reads[0]} | grep . |  awk '{if ( NR %4 == 3 ) { print \"+\" } else { print } }' ) <( zcat ${reads[1]} | grep . | awk '{if ( NR %4 == 3 ) { print \"+\" } else { print } }' )"
         } else {
-            reads_arg = "<( cat ${reads[0]} | grep . | awk '{if ( NR %4 == 3 ) { print \"+\" } else { print } }' ) <( cat ${reads[1]} | awk '{if ( NR %4 == 3 ) { print \"+\" } else { print } }' )"
+            reads_arg = "<( cat ${reads[0]} | grep . | awk '{if ( NR %4 == 3 ) { print \"+\" } else { print } }' ) <( cat ${reads[1]} | grep . | awk '{if ( NR %4 == 3 ) { print \"+\" } else { print } }' )"
         }
     }
 
